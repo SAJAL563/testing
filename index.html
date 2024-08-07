@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HLS Player</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="player-container">
+        <video id="video" controls></video>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script>
+        if(Hls.isSupported()) {
+            var video = document.getElementById('video');
+            var hls = new Hls();
+            hls.loadSource('https://sonydaimenew.akamaized.net/linear/hls/pb/event/g1cPcUIdSQC_3FXsrgV5iA/stream/f914e45e-f210-47ca-b3c3-b4864be8ced8:SIN2/variant/a8cd697f6485d4475fd2ed910e3ab6ea/bandwidth/hdntl=exp=1723117967~acl=%2f*~id=1f37bd3d-9a11-48fc-b0cd-26354d643eef~data=hdntl~hmac=69e71a7492a316481cd2e50deb8b7f2478682fb418dfdbe6a31158abed5a617a/4865152.m3u8?aka_me_session_id=AAAAAAAAAACPsbRmAAAAAHs9qxwD3ZbCjWOGdvNU6UsKisgbeoee+ZIZ4+M50McOshaVxLK64ANg8w7MhwIxyeZq4a2uiZev&aka_media_format_type=hls');
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED,function() {
+                video.play();
+            });
+        }
+        else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = 'abc.m3u8';
+            video.addEventListener('canplay',function() {
+                video.play();
+            });
+        }
+    </script>
+</body>
+</html>
