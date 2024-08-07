@@ -15,7 +15,7 @@
         if(Hls.isSupported()) {
             var video = document.getElementById('video');
             var hls = new Hls();
-            hls.loadSource('https://sonydaimenew.akamaized.net/hls/live/2094590/DAI25ME-V3/master_mdh.m3u8?hdnea=st=1723032681~exp=1723032981~acl=*~id=62ec0c38-f952-49ff-8d19-6bb1e185b078~hmac=d64f4febd06024f9a6850de852e95a10d4d4725be23c93fb92831ee8ec3c829b&originpath=/linear/hls/pb/event/g1cPcUIdSQC_3FXsrgV5iA/stream/e09a83aa-6f99-4438-80fb-8e5f28f0bfbf:TPE2/master.m3u8');
+            hls.loadSource('https://sonydaimenew.akamaized.net/hls/live/2094590/DAI25ME-V3/master_mdh.m3u8?hdnea=st=1723033436~exp=1723033736~acl=*~id=68d92fe5-ecb5-4f7b-8269-e8c79a659db6~hmac=32db9cc44c8d28b2c678091dc35dda76ed15cb3a1386f2bb67f7eb5ac5ec5deb&originpath=/linear/hls/pb/event/g1cPcUIdSQC_3FXsrgV5iA/stream/5827002a-ee24-4cd0-a1e2-cd48f74b6edb:SIN2/master.m3u8');
             hls.attachMedia(video);
             hls.on(Hls.Events.MANIFEST_PARSED,function() {
                 video.play();
