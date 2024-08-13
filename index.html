@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HLS Stream Player</title>
+    <title>Clappr HLS Player</title>
     <style>
         body {
             background-color: #121212;
@@ -15,35 +15,28 @@
             margin: 0;
             font-family: Arial, sans-serif;
         }
-        video {
+        #player {
             width: 80%;
-            height: auto;
+            height: 80%;
             border-radius: 10px;
-            outline: none;
         }
     </style>
 </head>
 <body>
-    <video id="video" controls></video>
+    <div id="player"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js"></script>
     <script>
-        const video = document.getElementById('video');
-        const videoSrc = 'https://dai.google.com/linear/hls/event/7044GU7mRL2-99W6nrnbzA/master.m3u8'; // Replace with your .m3u8 URL
-
-        if (Hls.isSupported()) {
-            const hls = new Hls();
-            hls.loadSource(videoSrc);
-            hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, function () {
-                video.play();
-            });
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = videoSrc;
-            video.addEventListener('loadedmetadata', function () {
-                video.play();
-            });
-        }
+        const player = new Clappr.Player({
+            source: 'https://dai.google.com/linear/hls/event/7044GU7mRL2-99W6nrnbzA/master.m3u8s', // Replace with your .m3u8 URL
+            parentId: '#player',
+            autoPlay: true,
+            width: '100%',
+            height: '100%',
+            mute: false,
+            loop: false,
+            mediacontrol: { seekbar: "#FF0000", buttons: "#FF0000" }
+        });
     </script>
 </body>
 </html>
