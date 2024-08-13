@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shaka Player HLS with CORS Proxy</title>
+    <title>HLS Stream Player</title>
     <style>
         body {
             background-color: #121212;
             color: white;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100vh;
@@ -21,56 +20,30 @@
             height: auto;
             border-radius: 10px;
             outline: none;
-            margin-bottom: 20px;
-        }
-        #error-message {
-            color: red;
-            text-align: center;
         }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.4.0/shaka-player.compiled.min.js"></script>
 </head>
 <body>
-    <video id="video" controls autoplay></video>
-    <div id="error-message"></div>
+    <video id="video" controls></video>
+
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script>
-        async function initPlayer() {
-            const video = document.getElementById('video');
-            const errorMessage = document.getElementById('error-message');
-            const player = new shaka.Player(video);
-
-            // Try different CORS proxies
-            const corsProxies = [
-                'https://cors-anywhere.herokuapp.com/',
-                'https://api.allorigins.win/raw?url=',
-                'https://thingproxy.freeboard.io/fetch/'
-            ];
-
-            const videoUrl = 'https://dai.google.com/linear/hls/event/7044GU7mRL2-99W6nrnbzA/master.m3u8';
-           
-            for (const proxy of corsProxies) {
-                try {
-                    await player.load(proxy + videoUrl);
-                    video.play();
-                    console.log('Stream loaded successfully with proxy:', proxy);
-                    return; // Exit the function if successful
-                } catch (error) {
-                    console.error('Error loading HLS stream with proxy:', proxy, error);
-                    errorMessage.textContent = `Error: ${error.message}. Trying next proxy...`;
-                }
-            }
-
-            errorMessage.textContent = 'Failed to load the stream with all available proxies.';
-        }
-
-        document.addEventListener('DOMContentLoaded', initPlayer);
-
-        // Add Shaka Player error event listener
         const video = document.getElementById('video');
-        const player = new shaka.Player(video);
-        player.addEventListener('error', (event) => {
-            console.error('Shaka player error:', event.detail);
-        });
+        const videoSrc = 'https://dai.google.com/linear/hls/event/7044GU7mRL2-99W6nrnbzA/master.m3u8'; // Replace with your .m3u8 URL
+
+        if (Hls.isSupported()) {
+            const hls = new Hls();
+            hls.loadSource(videoSrc);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                video.play();
+            });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = videoSrc;
+            video.addEventListener('loadedmetadata', function () {
+                video.play();
+            });
+        }
     </script>
 </body>
 </html>
