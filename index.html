@@ -34,9 +34,9 @@
             const player = new shaka.Player(video);
 
             // Use a CORS proxy (replace 'your_stream.m3u8' with your actual .m3u8 URL)
-            const corsProxy = 'https://cors-anywhere.herokuapp.com/';
+            const corsProxy = 'https://thingproxy.freeboard.io/fetch/';
             const videoUrl = corsProxy + 'https://dai.google.com/linear/hls/event/7044GU7mRL2-99W6nrnbzA/master.m3u8';
-
+           
             try {
                 await player.load(videoUrl);
                 video.play();
