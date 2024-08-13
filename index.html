@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flowplayer HLS Player</title>
+    <title>Shaka Player HLS</title>
     <style>
         body {
             background-color: #121212;
@@ -15,22 +15,33 @@
             margin: 0;
             font-family: Arial, sans-serif;
         }
-        #player {
+        video {
             width: 80%;
             height: auto;
             border-radius: 10px;
+            outline: none;
         }
     </style>
-    <link rel="stylesheet" href="https://releases.flowplayer.org/7.2.7/skin/skin.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.4.0/shaka-player.compiled.min.js"></script>
 </head>
 <body>
 
-    <div id="player" class="flowplayer">
-        <video>
-            <source type="application/x-mpegurl" src="https://dai.google.com/linear/hls/event/7044GU7mRL2-99W6nrnbzA/master.m3u8"> <!-- Replace with your .m3u8 URL -->
-        </video>
-    </div>
+    <video id="video" controls autoplay></video>
 
-    <script src="https://releases.flowplayer.org/7.2.7/flowplayer.min.js"></script>
+    <script>
+        async function initPlayer() {
+            const video = document.getElementById('video');
+            const player = new shaka.Player(video);
+
+            try {
+                await player.load('https://dai.google.com/linear/hls/event/7044GU7mRL2-99W6nrnbzA/master.m3u8'); // Replace with your .m3u8 URL
+                video.play();
+            } catch (error) {
+                console.error('Error loading HLS stream:', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initPlayer);
+    </script>
 </body>
 </html>
