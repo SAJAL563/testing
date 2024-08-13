@@ -3,27 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HLS Player</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>HLS Stream Player</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        video {
+            width: 80%;
+            height: auto;
+            border-radius: 10px;
+            outline: none;
+        }
+    </style>
 </head>
 <body>
-    <div class="player-container">
-        <video id="video" controls></video>
-    </div>
+    <video id="video" controls></video>
+
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script>
+        const video = document.getElementById('video');
+        const videoSrc = 'https://dai.google.com/linear/hls/event/7044GU7mRL2-99W6nrnbzA/master.m3u8'; // Replace with your .m3u8 URL
+
         if (Hls.isSupported()) {
-            var video = document.getElementById('video');
-            var hls = new Hls();
-            var proxyUrl = 'https://dai.google.com/linear/hls/event/7044GU7mRL2-99W6nrnbzA/master.m3u8'; // Use a CORS proxy
-            hls.loadSource(proxyUrl);
+            const hls = new Hls();
+            hls.loadSource(videoSrc);
             hls.attachMedia(video);
             hls.on(Hls.Events.MANIFEST_PARSED, function () {
                 video.play();
             });
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = 'https://dai.google.com/linear/hls/event/7044GU7mRL2-99W6nrnbzA/master.m3u8'; // Use a CORS proxy
-            video.addEventListener('canplay', function () {
+            video.src = videoSrc;
+            video.addEventListener('loadedmetadata', function () {
                 video.play();
             });
         }
