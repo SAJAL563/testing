@@ -3,17 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Embedded Twitch Live Stream</title>
+    <title>ewc_white Live Stream</title>
+    <link rel="icon" type="image/png" href="https://i.ibb.co/86VJ3JZ/favicon-32x32.png"> <!-- Replace with your favicon URL -->
+    <link href="https://fonts.googleapis.com/css2?family=Lilita+One&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #141414; /* Netflix-like dark background */
+            font-family: Arial, sans-serif;
+            color: #ffffff; /* White text color */
+            background-image: url('https://images.unsplash.com/photo-1593305841991-05c297ba4575?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&dl=fabio-magalhaes-nmTm7knUnqs-unsplash.jpg&w=1920'); /* Replace with your background image URL */
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            font-family: 'Lilita One', cursive; /* Google Font */
+            color: #ff00c8; /* Pink text color */
+        }
+
+        h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: hwb(310 0% 0%); /* Pink text color */
+        }
+
+        .video-container {
+            width: 100%;
+            height: calc(100vh - 250px); /* Adjusted for header and footer */
+            min-height: 720px; /* Minimum height 720px */
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+        }
+
+        footer {
+            margin-top: 30px;
+            font-size: 14px;
+            color: #cccccc; /* Lighter grey for footer text */
+        }
+    </style>
     <script src="https://player.twitch.tv/js/embed/v1.js"></script>
 </head>
 <body>
-    <!-- Placeholder for the Twitch embed -->
-    <div id="twitch-embed"></div>
+    <div class="container">
+        <h1>ewc_white Live Stream</h1>
+        <h2>#LiveNow #TwitchStream</h2>
+
+        <div class="video-container">
+            <div id="twitch-embed"></div>
+        </div>
+
+        <footer>
+            <p>Watch the best streams on <strong>Twitch</strong> with ewc_white.</p>
+            <p>© 2024 ewc_white. All rights reserved.</p>
+        </footer>
+    </div>
 
     <script type="text/javascript">
         var options = {
-            width: 854,
-            height: 480,
+            width: '100%',
+            height: '100%',
             channel: "ewc_white",
             parent: ["testing-azure-alpha.vercel.app"]  // Replace with your actual domain
         };
