@@ -4,14 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Embedded Twitch Live Stream</title>
+    <script src="https://player.twitch.tv/js/embed/v1.js"></script>
 </head>
 <body>
-    <!-- Embed the Twitch live stream -->
-    <iframe
-        src="https://player.twitch.tv/?channel=ewc_white&parent=https://testing-azure-alpha.vercel.app"
-        height="480"
-        width="854"
-        allowfullscreen>
-    </iframe>
+    <!-- Placeholder for the Twitch embed -->
+    <div id="twitch-embed"></div>
+
+    <script type="text/javascript">
+        var options = {
+            width: 854,
+            height: 480,
+            channel: "ewc_white",
+            parent: ["testing-azure-alpha.vercel.app"]  // Replace with your actual domain
+        };
+        var player = new Twitch.Player("twitch-embed", options);
+        player.setVolume(0.5);
+    </script>
 </body>
 </html>
