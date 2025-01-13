@@ -1,5 +1,5 @@
 // Replace 'YOUR_M3U8_URL_HERE' with the actual .m3u8 URL
-const m3u8Url = 'https://sajalsdrive.xyz/0:/1.m3u8';
+const m3u8Url = 'https://cors-proxy-fawn.vercel.app/proxy?url=https://sajalsdrive.xyz/0:/1.m3u8';
 
 const video = document.getElementById('videoPlayer');
 const statusMessage = document.getElementById('statusMessage');
