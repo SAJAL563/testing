@@ -3,122 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IND vs SL Live Stream</title>
-    <link rel="icon" type="image/png" href="https://i.ibb.co/86VJ3JZ/favicon-32x32.png">
-    <link href="https://fonts.googleapis.com/css2?family=Lilita+One&display=swap" rel="stylesheet">
-
-    <meta name="referrer" content="strict-origin-when-cross-origin">
-
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #141414; /* Netflix-like dark background */
-            font-family: Arial, sans-serif;
-            color: #ffffff; /* White text color */
-            background-image: url('https://images.unsplash.com/photo-1593305841991-05c297ba4575?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&dl=fabio-magalhaes-nmTm7knUnqs-unsplash.jpg');
-            background-size: cover;
-            background-repeat: no-repeat;
-            background-position: center;
-        }
-
-        .title-bar {
-            padding: 20px;
-            text-align: center;
-            background-color: rgba(0, 0, 0, 0.7);
-        }
-
-        h1 {
-            font-size: 36px;
-            font-weight: bold;
-            margin-bottom: 20px;
-            font-family: 'Lilita One', cursive;
-            color: #ff00c8;
-        }
-
-        .video-container {
-            width: 100%;
-            height: calc(100vh - 100px);
-            min-height: 720px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: black;
-        }
-
-        video {
-            width: 100%;
-            height: 100%;
-            outline: none;
-        }
-
-        footer {
-            background-color: #333;
-            color: white;
-            text-align: center;
-            padding: 10px 0;
-            position: relative;
-            bottom: 0;
-            width: 100%;
-        }
-    </style>
+    <title>Live Stream Player</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="title-bar">
-        <h1>IND vs SL T20 Live Stream</h1>
+    <div class="container">
+        <h1>Live Stream Player</h1>
+        <div class="player-container">
+            <video id="videoPlayer" controls autoplay></video>
+        </div>
+        <p id="statusMessage"></p>
     </div>
-
-    <div class="video-container">
-        <video id="video" controls></video>
-    </div>
-
-    <footer>
-        <div class="text-sm">Credits: Sajal <3</div>
-    </footer>
-
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <script>
-        // Get the video URL from the hash part of the URL
-        const urlHash = window.location.hash;
-        const videoSrc = urlHash.substring(1); // Remove the '#' character
-
-        var video = document.getElementById('video');
-
-        if (Hls.isSupported() && videoSrc) {
-            var hls = new Hls({
-                xhrSetup: function(xhr, url) {
-                    // Set the custom headers for the XMLHttpRequest
-                    xhr.setRequestHeader('ext_name', 'ojplmecpdpgccookcobabopnaifgidhf');
-                    xhr.setRequestHeader('login_status', 'true');
-                    xhr.setRequestHeader('panicToggle', 'false');
-                    xhr.setRequestHeader('sch', 'null');
-                    xhr.setRequestHeader('x-ab-origin', 'prod_1');
-                    xhr.setRequestHeader('layoutCohort', '041801a0%2C02ec012b%2C7a7109ea');
-                    xhr.setRequestHeader('perf_dv6Tr4n', '1');
-                    xhr.setRequestHeader('WZRK_S_RK6-77W-Z76Z', '%7B%22p%22%3A3%7D');
-                    xhr.setRequestHeader("accept", "*/*");
-                    xhr.setRequestHeader("accept-language", "en-MM,en-GB;q=0.9,en-US;q=0.8,en;q=0.7,hi;q=0.6");
-                    xhr.setRequestHeader("priority", "u=1, i");
-                    xhr.setRequestHeader("sec-fetch-dest", "empty");
-                    xhr.setRequestHeader("sec-fetch-mode", "cors");
-                    xhr.setRequestHeader("sec-fetch-site", "same-site");
-                    xhr.setRequestHeader("Referer", "https://www.jiocinema.com/");
-                    xhr.setRequestHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-                }
-            });
-            hls.loadSource(videoSrc);
-            hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                video.play();
-            });
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = videoSrc;
-            video.addEventListener('loadedmetadata', function() {
-                video.play();
-            });
-        } else {
-            alert('HLS not supported or video URL is invalid.');
-        }
-    </script>
+    <script src="stream.js"></script>
 </body>
 </html>
