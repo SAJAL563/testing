@@ -93,7 +93,10 @@
                     type: 'application/x-mpegURL',
                     src: modifiedPlaylist
                 });
-                player.play(); // Start playing after the source is set
+                // Wait for user interaction before playing the video
+                document.querySelector('video').addEventListener('click', function () {
+                    player.play();
+                });
             } else {
                 console.error("Failed to load the modified M3U8 playlist.");
             }
