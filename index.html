@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pinki KI MKC</title>
+    <link href="https://cdn.jsdelivr.net/npm/video.js@7.10.2/dist/video-js.css" rel="stylesheet" />
     <style>
         /* General Reset */
         body, html {
@@ -18,7 +19,7 @@
         }
 
         /* Video Player Styling */
-        video {
+        .video-js {
             width: 90%;
             height: auto;
             max-width: 100%;
@@ -29,84 +30,74 @@
     </style>
 </head>
 <body>
-    <video id="videoPlayer" controls></video>
+    <video id="videoPlayer" class="video-js vjs-default-skin" controls></video>
 
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/video.js@7.10.2/dist/video.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/videojs-contrib-hls@2.0.2/dist/videojs-contrib-hls.js"></script>
     <script>
         const proxyUrl = "https://cors-proxy-fawn.vercel.app/proxy?url=";
         const originalM3U8Url = "https://d2gkjxlri0rfqi.cloudfront.net/ivs/v1/916749774596/48acSC7vpXvV/2025/1/14/11/52/RCJxYN1S8606/media/hls/1080p60/playlist_vod.m3u8";
 
-        // Get the video player element
-        const video = document.getElementById('videoPlayer');
+        // Initialize the Video.js player
+        const player = videojs('videoPlayer', {
+            techOrder: ['html5'], // Use the HTML5 player by default
+            sources: [{
+                type: 'application/x-mpegURL',
+                src: originalM3U8Url
+            }]
+        });
 
-        // Check if HLS is supported
-        if (Hls.isSupported()) {
-            const hls = new Hls();
+        // Function to fetch and modify the M3U8 playlist
+        async function fetchAndModifyM3U8(url) {
+            try {
+                console.log(`Fetching M3U8 playlist: ${url}`);
 
-            // Function to fetch and modify the M3U8 playlist
-            async function fetchAndModifyM3U8(url) {
-                try {
-                    console.log(`Fetching M3U8 playlist: ${url}`);
-
-                    // Fetch the playlist
-                    const response = await fetch(url);
-                    if (!response.ok) {
-                        console.error("Failed to fetch M3U8: ", response.statusText);
-                        return;
-                    }
-
-                    // Get the playlist text
-                    const playlist = await response.text();
-                    console.log("Original M3U8 Playlist:", playlist);
-
-                    // Check if the playlist starts with "#EXTM3U"
-                    if (!playlist.startsWith("#EXTM3U")) {
-                        console.error("Invalid M3U8 response:", playlist);
-                        return;
-                    }
-
-                    // Modify the playlist by replacing .ts URLs with proxy URLs
-                    const modifiedPlaylist = playlist.replace(/([^\n]+\.ts)/g, (match) => {
-                        const tsRelativeUrl = match.trim();
-                        const fullTsUrl = new URL(tsRelativeUrl, url).href;
-                        const proxyTsUrl = `${proxyUrl}${encodeURIComponent(fullTsUrl)}`;
-                        console.log(`Modified TS URL: ${proxyTsUrl}`);
-                        return proxyTsUrl;
-                    });
-
-                    console.log("Modified M3U8 Playlist:", modifiedPlaylist);
-                    return modifiedPlaylist;
-                } catch (error) {
-                    console.error("Error fetching or modifying the M3U8 playlist:", error);
+                // Fetch the playlist
+                const response = await fetch(url);
+                if (!response.ok) {
+                    console.error("Failed to fetch M3U8: ", response.statusText);
+                    return;
                 }
+
+                // Get the playlist text
+                const playlist = await response.text();
+                console.log("Original M3U8 Playlist:", playlist);
+
+                // Check if the playlist starts with "#EXTM3U"
+                if (!playlist.startsWith("#EXTM3U")) {
+                    console.error("Invalid M3U8 response:", playlist);
+                    return;
+                }
+
+                // Modify the playlist by replacing .ts URLs with proxy URLs
+                const modifiedPlaylist = playlist.replace(/([^\n]+\.ts)/g, (match) => {
+                    const tsRelativeUrl = match.trim();
+                    const fullTsUrl = new URL(tsRelativeUrl, url).href;
+                    const proxyTsUrl = `${proxyUrl}${encodeURIComponent(fullTsUrl)}`;
+                    console.log(`Modified TS URL: ${proxyTsUrl}`);
+                    return proxyTsUrl;
+                });
+
+                console.log("Modified M3U8 Playlist:", modifiedPlaylist);
+                return modifiedPlaylist;
+            } catch (error) {
+                console.error("Error fetching or modifying the M3U8 playlist:", error);
             }
-
-            // Fetch the modified M3U8 playlist
-            fetchAndModifyM3U8(originalM3U8Url).then((modifiedPlaylist) => {
-                if (modifiedPlaylist) {
-                    // Load the modified playlist into HLS.js
-                    hls.loadSource(modifiedPlaylist);
-                    hls.attachMedia(video);
-
-                    hls.on(Hls.Events.MANIFEST_PARSED, function () {
-                        console.log("Manifest loaded, video ready to play!");
-                        video.play(); // Play the video after the manifest is loaded
-                    });
-
-                    hls.on(Hls.Events.ERROR, function (event, data) {
-                        console.error("HLS.js error:", data);
-                    });
-                } else {
-                    console.error("Failed to load the modified M3U8 playlist.");
-                }
-            });
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            // Fallback for Safari
-            video.src = originalM3U8Url;
-            video.play();
-        } else {
-            alert("Your browser does not support HLS streaming.");
         }
+
+        // Fetch the modified M3U8 playlist
+        fetchAndModifyM3U8(originalM3U8Url).then((modifiedPlaylist) => {
+            if (modifiedPlaylist) {
+                // Change the source to the modified M3U8 playlist
+                player.src({
+                    type: 'application/x-mpegURL',
+                    src: modifiedPlaylist
+                });
+                player.play(); // Start playing after the source is set
+            } else {
+                console.error("Failed to load the modified M3U8 playlist.");
+            }
+        });
     </script>
 </body>
 </html>
