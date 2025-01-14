@@ -52,11 +52,16 @@
                 // Log the playlist for debugging
                 console.log("Original M3U8 Playlist:", playlist);
 
-                // Modify the .ts URLs to include the proxy
+                // Extract base URL of the .m3u8 file (to be used for full .ts URLs)
+                const baseUrl = url.substring(0, url.lastIndexOf('/') + 1);
+
+                // Modify the .ts URLs to include the full URL through the proxy
                 const modifiedPlaylist = playlist.replace(/([^\n]+\.ts)/g, (match) => {
-                    const tsUrl = match.trim();
+                    const tsRelativeUrl = match.trim();
+                    // Create the full URL for each .ts file by combining the base URL with the relative .ts URL
+                    const fullTsUrl = baseUrl + tsRelativeUrl;
                     // Modify the .ts segment URL to go through the proxy
-                    const proxyTsUrl = `${proxyUrl}${encodeURIComponent(tsUrl)}`;
+                    const proxyTsUrl = `${proxyUrl}${encodeURIComponent(fullTsUrl)}`;
                     console.log(`Modified TS URL: ${proxyTsUrl}`);  // Log each modified .ts URL
                     return proxyTsUrl;
                 });
