@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M3U8 Player</title>
+    <title>Pinki KI MKC</title>
     <style>
         /* General Reset */
         body, html {
@@ -11,126 +11,46 @@
             padding: 0;
             box-sizing: border-box;
             height: 100%;
-            font-family: 'Poppins', sans-serif;
             background: linear-gradient(135deg, #1a0033, #330066);
-            color: #fff;
             display: flex;
             justify-content: center;
             align-items: center;
         }
 
-        /* Video Player Container */
-        .player-container {
-            width: 90%;
-            max-width: 800px;
-            background: #2b0057;
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-            text-align: center;
-        }
-
-        h1 {
-            margin: 0 0 15px;
-            font-size: 24px;
-            color: #e0c3fc;
-        }
-
+        /* Video Player Styling */
         video {
-            width: 100%;
+            width: 90%;
+            height: auto;
+            max-width: 100%;
+            max-height: 100%;
             border-radius: 10px;
-        }
-
-        /* Custom Controls */
-        .controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 10px;
-        }
-
-        button, select, input[type="range"] {
-            background: #3e007a;
-            color: #fff;
-            border: none;
-            border-radius: 5px;
-            padding: 10px 15px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        button:hover, select:hover {
-            background: #5700b3;
-        }
-
-        input[type="range"] {
-            flex: 1;
-            margin: 0 10px;
-            -webkit-appearance: none;
-        }
-
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 12px;
-            height: 12px;
-            background: #e0c3fc;
-            border-radius: 50%;
-            cursor: pointer;
-        }
-
-        .volume-control {
-            display: flex;
-            align-items: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
         }
     </style>
 </head>
 <body>
-    <div class="player-container">
-        <h1>M3U8 Video Player</h1>
-        <video id="videoPlayer" controls crossorigin="anonymous">
-            <source src="https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" type="application/x-mpegURL">
-            Your browser does not support playing M3U8 files.
-        </video>
-        <div class="controls">
-            <button id="playPauseBtn">Play</button>
-            <div class="volume-control">
-                <span>Volume:</span>
-                <input id="volumeSlider" type="range" min="0" max="1" step="0.1" value="0.5">
-            </div>
-            <select id="playbackRate">
-                <option value="0.5">0.5x</option>
-                <option value="1" selected>1x</option>
-                <option value="1.5">1.5x</option>
-                <option value="2">2x</option>
-            </select>
-        </div>
-    </div>
+    <video id="videoPlayer" controls></video>
+
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script>
-        const videoPlayer = document.getElementById('videoPlayer');
-        const playPauseBtn = document.getElementById('playPauseBtn');
-        const volumeSlider = document.getElementById('volumeSlider');
-        const playbackRate = document.getElementById('playbackRate');
+        // URL of the M3U8 file
+        const videoSrc = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
+        const video = document.getElementById('videoPlayer');
 
-        // Play/Pause Toggle
-        playPauseBtn.addEventListener('click', () => {
-            if (videoPlayer.paused) {
-                videoPlayer.play();
-                playPauseBtn.textContent = 'Pause';
-            } else {
-                videoPlayer.pause();
-                playPauseBtn.textContent = 'Play';
-            }
-        });
-
-        // Volume Control
-        volumeSlider.addEventListener('input', () => {
-            videoPlayer.volume = volumeSlider.value;
-        });
-
-        // Playback Speed
-        playbackRate.addEventListener('change', () => {
-            videoPlayer.playbackRate = playbackRate.value;
-        });
+        // Check if HLS is supported
+        if (Hls.isSupported()) {
+            const hls = new Hls();
+            hls.loadSource(videoSrc);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                console.log("Manifest loaded, video ready to play!");
+            });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            // Fallback for Safari
+            video.src = videoSrc;
+        } else {
+            alert("Your browser does not support HLS streaming.");
+        }
     </script>
 </body>
 </html>
