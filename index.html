@@ -80,26 +80,42 @@
             const hls = new Hls();
 
             // Fetch and modify the playlist before loading it
-            fetchAndModifyM3U8(mainM3U8Url).then(modifiedPlaylist => {
-                if (modifiedPlaylist) {
-                    hls.loadSource(modifiedPlaylist); // Load the modified playlist
-                    hls.attachMedia(video);
-                    hls.on(Hls.Events.MANIFEST_PARSED, function () {
-                        console.log("Manifest loaded, video ready to play!");
-                    });
-                    hls.on(Hls.Events.ERROR, function (event, data) {
-                        console.error("HLS Error:", data);
-                    });
-                } else {
-                    alert("Failed to load or modify the playlist.");
-                }
-            });
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            // Fallback for Safari
-            video.src = mainM3U8Url;
-        } else {
-            alert("Your browser does not support HLS streaming.");
+            async function fetchAndModifyM3U8(url) {
+    try {
+        console.log(`Fetching M3U8 playlist: ${url}`);
+        
+        const response = await fetch(url);
+        if (!response.ok) {
+            console.error("Failed to fetch M3U8: ", response.statusText);
+            return;
         }
+        
+        const playlist = await response.text();
+        console.log("Original M3U8 Playlist:", playlist);
+
+        // Check if the playlist starts with "#EXTM3U"
+        if (!playlist.startsWith("#EXTM3U")) {
+            console.error("Invalid M3U8 response:", playlist);
+            return;
+        }
+
+        const baseUrl = url.substring(0, url.lastIndexOf('/') + 1);
+
+        const modifiedPlaylist = playlist.replace(/([^\n]+\.ts)/g, (match) => {
+            const tsRelativeUrl = match.trim();
+            const fullTsUrl = baseUrl + tsRelativeUrl;
+            const proxyTsUrl = `${proxyUrl}${fullTsUrl}`;
+            console.log(`Modified TS URL: ${proxyTsUrl}`);
+            return proxyTsUrl;
+        });
+
+        console.log("Modified M3U8 Playlist:", modifiedPlaylist);
+        return modifiedPlaylist;
+    } catch (error) {
+        console.error("Error fetching or modifying the M3U8 playlist:", error);
+    }
+}
+
     </script>
 </body>
 </html>
