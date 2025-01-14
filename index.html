@@ -60,8 +60,10 @@
                     const tsRelativeUrl = match.trim();
                     // Create the full URL for each .ts file by combining the base URL with the relative .ts URL
                     const fullTsUrl = baseUrl + tsRelativeUrl;
+                    // Remove URL encoding from the .ts file URL before passing it to the proxy
+                    const decodedTsUrl = decodeURIComponent(fullTsUrl); 
                     // Modify the .ts segment URL to go through the proxy
-                    const proxyTsUrl = `${proxyUrl}${encodeURIComponent(fullTsUrl)}`;
+                    const proxyTsUrl = `${proxyUrl}${encodeURIComponent(decodedTsUrl)}`;
                     console.log(`Modified TS URL: ${proxyTsUrl}`);  // Log each modified .ts URL
                     return proxyTsUrl;
                 });
