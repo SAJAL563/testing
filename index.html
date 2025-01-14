@@ -33,21 +33,54 @@
 
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script>
+        // Function to fetch and modify the M3U8 playlist
+        async function fetchAndModifyM3U8(url) {
+            // Proxy URL
+            const proxyUrl = "https://cors-proxy-fawn.vercel.app/proxy?url=";
+
+            try {
+                // Fetch the original M3U8 playlist
+                const response = await fetch(url);
+                const playlist = await response.text();
+
+                // Modify the .ts URLs in the playlist to include the proxy
+                const modifiedPlaylist = playlist.replace(/([^\n]+\.ts)/g, (match) => {
+                    // Build the full URL with the proxy
+                    const tsUrl = match.trim();
+                    const modifiedUrl = `${proxyUrl}${encodeURIComponent(tsUrl)}`;
+                    return modifiedUrl;
+                });
+
+                // Return the modified playlist
+                return modifiedPlaylist;
+            } catch (error) {
+                console.error("Error fetching or modifying the M3U8 playlist:", error);
+            }
+        }
+
         // URL of the M3U8 file
-        const videoSrc = "https://cors-proxy-fawn.vercel.app/proxy?url=https://sajalsdrive.xyz/0:/1.txt";
+        const mainM3U8Url = "https://sajalsdrive.xyz/0:/1.m3u8";
         const video = document.getElementById('videoPlayer');
 
         // Check if HLS is supported
         if (Hls.isSupported()) {
             const hls = new Hls();
-            hls.loadSource(videoSrc);
-            hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, function () {
-                console.log("Manifest loaded, video ready to play!");
+
+            // Fetch and modify the playlist before loading it
+            fetchAndModifyM3U8(mainM3U8Url).then(modifiedPlaylist => {
+                if (modifiedPlaylist) {
+                    hls.loadSource(modifiedPlaylist); // Load the modified playlist
+                    hls.attachMedia(video);
+                    hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                        console.log("Manifest loaded, video ready to play!");
+                    });
+                } else {
+                    alert("Failed to load or modify the playlist.");
+                }
             });
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
             // Fallback for Safari
-            video.src = videoSrc;
+            video.src = mainM3U8Url;
         } else {
             alert("Your browser does not support HLS streaming.");
         }
