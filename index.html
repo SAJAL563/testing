@@ -38,7 +38,7 @@
 
         const video = document.getElementById('videoPlayer');
 
-        // Function to modify M3U8 playlist
+        // Function to modify the M3U8 playlist
         async function fetchAndModifyM3U8(url) {
             try {
                 // Fetch the playlist from the original URL
@@ -53,7 +53,11 @@
                     return proxyTsUrl;
                 });
 
-                return modifiedPlaylist;
+                // Create a Blob with the modified M3U8 content
+                const blob = new Blob([modifiedPlaylist], { type: 'application/x-mpegURL' });
+                const modifiedM3U8Url = URL.createObjectURL(blob);
+
+                return modifiedM3U8Url;
             } catch (error) {
                 console.error("Error fetching or modifying the M3U8 playlist:", error);
             }
@@ -63,11 +67,11 @@
         if (Hls.isSupported()) {
             const hls = new Hls();
 
-            // Fetch and modify the M3U8 playlist
-            fetchAndModifyM3U8(originalM3U8Url).then((modifiedPlaylist) => {
-                if (modifiedPlaylist) {
-                    // Load the modified M3U8 playlist into HLS.js
-                    hls.loadSource(modifiedPlaylist);
+            // Fetch and modify the M3U8 playlist, then play the video
+            fetchAndModifyM3U8(originalM3U8Url).then((modifiedM3U8Url) => {
+                if (modifiedM3U8Url) {
+                    // Set the modified M3U8 as the source for HLS.js
+                    hls.loadSource(modifiedM3U8Url);
                     hls.attachMedia(video);
                     hls.on(Hls.Events.MANIFEST_PARSED, function () {
                         console.log("Manifest loaded, video ready to play!");
