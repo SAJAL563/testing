@@ -90,6 +90,11 @@
 
                     hls.on(Hls.Events.MANIFEST_PARSED, function () {
                         console.log("Manifest loaded, video ready to play!");
+                        video.play(); // Play the video after the manifest is loaded
+                    });
+
+                    hls.on(Hls.Events.ERROR, function (event, data) {
+                        console.error("HLS.js error:", data);
                     });
                 } else {
                     console.error("Failed to load the modified M3U8 playlist.");
@@ -98,6 +103,7 @@
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
             // Fallback for Safari
             video.src = originalM3U8Url;
+            video.play();
         } else {
             alert("Your browser does not support HLS streaming.");
         }
