@@ -103,36 +103,36 @@
 
         // Initialize HLS.js player
         if (Hls.isSupported()) {
-            const hls = new Hls();
+    const hls = new Hls(); // Initialize HLS.js correctly
 
-            // Fetch and store the initial M3U8 playlist
-            fetchAndStoreM3U8(originalM3U8Url).then((localM3U8Url) => {
-                if (localM3U8Url) {
-                    hls.loadSource(localM3U8Url);
-                    hls.attachMedia(video);
-                    hls.on(Hls.Events.MANIFEST_PARSED, function () {
-                        console.log("Manifest loaded, video ready to play!");
-                    });
+    // Fetch and store the initial M3U8 playlist
+    fetchAndStoreM3U8(originalM3U8Url).then((localM3U8Url) => {
+        if (localM3U8Url) {
+            hls.loadSource(localM3U8Url);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                console.log("Manifest loaded, video ready to play!");
+            });
 
-                    // Start periodic fetch to update playlist every 10 seconds
-                    startPeriodicFetch();
-                } else {
-                    console.error("Failed to load the modified M3U8 playlist.");
-                }
-            });
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            fetchAndStoreM3U8(originalM3U8Url).then((localM3U8Url) => {
-                if (localM3U8Url) {
-                    video.src = localM3U8Url;
-                    // Start periodic fetch to update playlist every 10 seconds
-                    startPeriodicFetch();
-                } else {
-                    console.error("Failed to load the modified M3U8 playlist.");
-                }
-            });
+            // Start periodic fetch to update playlist every 10 seconds
+            startPeriodicFetch();
         } else {
-            alert("Your browser does not support HLS streaming.");
+            console.error("Failed to load the modified M3U8 playlist.");
         }
+    });
+} else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    fetchAndStoreM3U8(originalM3U8Url).then((localM3U8Url) => {
+        if (localM3U8Url) {
+            video.src = localM3U8Url;
+            // Start periodic fetch to update playlist every 10 seconds
+            startPeriodicFetch();
+        } else {
+            console.error("Failed to load the modified M3U8 playlist.");
+        }
+    });
+} else {
+    alert("Your browser does not support HLS streaming.");
+}
     </script>
 </body>
 </html>
