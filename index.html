@@ -33,9 +33,28 @@
 
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script>
+        // Proxy URL
         const proxyUrl = "https://cors-proxy-fawn.vercel.app/proxy?url=";
-        const originalM3U8Url = "https://cors-proxy-fawn.vercel.app/proxy?url=https://sajalsdrive.xyz/0:/1.m3u8";
 
+        // Override fetch API
+        const originalFetch = window.fetch;
+        window.fetch = async function (input, init) {
+            if (typeof input === "string") {
+                input = proxyUrl + encodeURIComponent(input);
+            } else if (input instanceof Request) {
+                input = new Request(proxyUrl + encodeURIComponent(input.url), input);
+            }
+            return originalFetch(input, init);
+        };
+
+        // Override XMLHttpRequest
+        const originalOpen = XMLHttpRequest.prototype.open;
+        XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+            const modifiedUrl = proxyUrl + encodeURIComponent(url);
+            return originalOpen.call(this, method, modifiedUrl, ...rest);
+        };
+
+        const originalM3U8Url = "https://sajalsdrive.xyz/0:/1.m3u8";
         const video = document.getElementById('videoPlayer');
 
         // Function to modify the M3U8 playlist
