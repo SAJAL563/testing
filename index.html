@@ -29,125 +29,128 @@
 <body>
     <video id="videoPlayer" controls></video>
 
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script>
         const proxyUrl = "https://cors-proxy-fawn.vercel.app/proxy?url=";
         const originalM3U8Url = "https://cors-proxy-fawn.vercel.app/proxy?url=https://d27h84tpitp9e0.cloudfront.net/ivs/v1/916749774596/cv7OeduHYcU8/2025/1/15/7/11/sRjo9dMRool0/media/hls/1080p60/playlist_vod.m3u8";
 
-        const video = document.getElementById('videoPlayer');
-        let hls = null; // Store HLS instance globally
+        class HLSPlayer {
+            constructor(videoElement) {
+                this.video = videoElement;
+                this.mediaSource = new MediaSource();
+                this.sourceBuffer = null;
+                this.segments = new Set();
+                this.pendingSegments = [];
+                this.isUpdating = false;
+                this.baseUrl = '';
 
-        // Global variable to store the modified playlist
-        let modifiedPlaylist = "";
+                this.video.src = URL.createObjectURL(this.mediaSource);
+                this.mediaSource.addEventListener('sourceopen', () => this.onSourceOpen());
+            }
 
-        // Function to fetch, modify, and store the M3U8 playlist and its TS segments locally
-        async function fetchAndStoreM3U8(url) {
-            try {
-                // Fetch the M3U8 playlist
-                const response = await fetch(url);
-                const playlist = await response.text();
+            async onSourceOpen() {
+                this.sourceBuffer = this.mediaSource.addSourceBuffer('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');
+                this.sourceBuffer.mode = 'segments';
+                this.sourceBuffer.addEventListener('updateend', () => this.onUpdateEnd());
+                await this.initializePlaylist();
+            }
 
-                // Base URL for resolving relative TS URLs
-                const baseUrl = url.match(/.+\//)[0];
-
-                // Extract and modify TS segment URLs
-                let newModifiedPlaylist = playlist.replace(/([^\n]+\.ts)/g, (match) => {
-                    const fullTsUrl = `${baseUrl}${match}`;
-                    return `${proxyUrl}${fullTsUrl}`;
-                });
-
-                // Update the global modifiedPlaylist by appending only new segments
-                if (modifiedPlaylist) {
-                    const newSegments = newModifiedPlaylist.split('\n').filter(line => line.includes('.ts'));
-                    newSegments.forEach(segment => {
-                        if (!modifiedPlaylist.includes(segment)) {
-                            modifiedPlaylist += "\n" + segment;
-                        }
-                    });
-                } else {
-                    modifiedPlaylist = newModifiedPlaylist;
+            async initializePlaylist() {
+                try {
+                    const playlist = await this.fetchPlaylist();
+                    this.baseUrl = this.getBaseUrl();
+                    const segments = this.parsePlaylist(playlist);
+                    await this.loadInitialSegments(segments);
+                } catch (error) {
+                    console.error('Error initializing playlist:', error);
                 }
+            }
 
-                // Create a Blob for the modified M3U8 playlist
-                const m3u8Blob = new Blob([modifiedPlaylist], { type: 'application/x-mpegURL' });
-                const localM3U8Url = URL.createObjectURL(m3u8Blob);
+            async fetchPlaylist() {
+                const response = await fetch(originalM3U8Url);
+                return await response.text();
+            }
 
-                return localM3U8Url;
-            } catch (error) {
-                console.error("Error fetching or modifying the M3U8 playlist:", error);
+            getBaseUrl() {
+                return originalM3U8Url.match(/.+\//)[0];
+            }
+
+            parsePlaylist(playlist) {
+                const lines = playlist.split('\n');
+                const segments = [];
+                for (let i = 0; i < lines.length; i++) {
+                    if (lines[i].endsWith('.ts')) {
+                        segments.push(lines[i]);
+                    }
+                }
+                return segments;
+            }
+
+            async loadInitialSegments(segments) {
+                for (const segment of segments) {
+                    if (!this.segments.has(segment)) {
+                        this.segments.add(segment);
+                        await this.fetchAndAppendSegment(segment);
+                    }
+                }
+            }
+
+            async fetchAndAppendSegment(segmentUrl) {
+                try {
+                    const fullUrl = `${proxyUrl}${this.baseUrl}${segmentUrl}`;
+                    const response = await fetch(fullUrl);
+                    const data = await response.arrayBuffer();
+                    
+                    if (this.sourceBuffer.updating) {
+                        this.pendingSegments.push(data);
+                    } else {
+                        this.appendSegment(data);
+                    }
+                } catch (error) {
+                    console.error('Error fetching segment:', error);
+                }
+            }
+
+            appendSegment(data) {
+                try {
+                    this.sourceBuffer.appendBuffer(data);
+                } catch (error) {
+                    console.error('Error appending segment:', error);
+                }
+            }
+
+            onUpdateEnd() {
+                this.isUpdating = false;
+                if (this.pendingSegments.length > 0) {
+                    const nextSegment = this.pendingSegments.shift();
+                    this.appendSegment(nextSegment);
+                }
+            }
+
+            async checkForNewSegments() {
+                try {
+                    const playlist = await this.fetchPlaylist();
+                    const newSegments = this.parsePlaylist(playlist);
+                    
+                    for (const segment of newSegments) {
+                        if (!this.segments.has(segment)) {
+                            this.segments.add(segment);
+                            await this.fetchAndAppendSegment(segment);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error checking for new segments:', error);
+                }
             }
         }
 
-        // Function to keep the player running and updating the playlist
-        function startPeriodicFetch() {
-            let isFetching = false;
+        // Initialize the player
+        const video = document.getElementById('videoPlayer');
+        const player = new HLSPlayer(video);
 
-            setInterval(async () => {
-                if (isFetching) return;
-
-                isFetching = true;
-
-                const localM3U8Url = await fetchAndStoreM3U8(originalM3U8Url);
-                if (localM3U8Url && hls) {
-                    const currentTime = video.currentTime;
-                    const wasPlaying = !video.paused;
-                    
-                    // Update the source without creating a new HLS instance
-                    hls.loadSource(localM3U8Url);
-                    
-                    // Restore playback state
-                    video.currentTime = currentTime;
-                    if (wasPlaying) {
-                        video.play();
-                    }
-                    
-                    console.log("Updated playlist loaded with new segments.");
-                } else {
-                    console.error("Failed to update the modified M3U8 playlist.");
-                }
-
-                isFetching = false;
-            }, 10000);
-        }
-
-        // Initialize HLS.js player
-        if (Hls.isSupported()) {
-            hls = new Hls({
-                maxBufferLength: 30,
-                maxMaxBufferLength: 600,
-                maxBufferSize: 60 * 1000 * 1000,
-                maxBufferHole: 0.5,
-                lowLatencyMode: true
-            });
-
-            // Fetch and store the initial M3U8 playlist
-            fetchAndStoreM3U8(originalM3U8Url).then((localM3U8Url) => {
-                if (localM3U8Url) {
-                    hls.loadSource(localM3U8Url);
-                    hls.attachMedia(video);
-                    hls.on(Hls.Events.MANIFEST_PARSED, function () {
-                        console.log("Manifest loaded, video ready to play!");
-                        video.play().catch(e => console.log("Playback failed:", e));
-                    });
-
-                    // Start periodic fetch to update playlist every 10 seconds
-                    startPeriodicFetch();
-                } else {
-                    console.error("Failed to load the modified M3U8 playlist.");
-                }
-            });
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            fetchAndStoreM3U8(originalM3U8Url).then((localM3U8Url) => {
-                if (localM3U8Url) {
-                    video.src = localM3U8Url;
-                    startPeriodicFetch();
-                } else {
-                    console.error("Failed to load the modified M3U8 playlist.");
-                }
-            });
-        } else {
-            alert("Your browser does not support HLS streaming.");
-        }
+        // Periodically check for new segments
+        setInterval(() => {
+            player.checkForNewSegments();
+        }, 10000);
     </script>
 </body>
 </html>
