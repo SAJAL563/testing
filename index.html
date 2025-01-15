@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Local M3U8 Playback</title>
+    <title>Pinki KI MKC</title>
     <style>
+        /* General Reset */
         body, html {
             margin: 0;
             padding: 0;
@@ -16,6 +17,7 @@
             align-items: center;
         }
 
+        /* Video Player Styling */
         video {
             width: 90%;
             height: auto;
@@ -29,12 +31,15 @@
 <body>
     <video id="videoPlayer" controls></video>
 
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script>
-        const m3u8Url = "https://sajalsdrive.xyz/0:/1.m3u8"; // Your M3U8 URL
+        const proxyUrl = "https://cors-proxy-fawn.vercel.app/proxy?url=";
+        const originalM3U8Url = "https://cors-proxy-fawn.vercel.app/proxy?url=https://sajalsdrive.xyz/0:/1.m3u8";
+
         const video = document.getElementById('videoPlayer');
 
-        // Fetch and process M3U8 playlist
-        async function processM3U8(url) {
+        // Function to fetch, modify, and store the M3U8 playlist and its TS segments locally
+        async function fetchAndStoreM3U8(url) {
             try {
                 // Fetch the M3U8 playlist
                 const response = await fetch(url);
@@ -47,13 +52,14 @@
                 const localTsUrls = [];
                 for (const tsUrl of tsUrls) {
                     const fullTsUrl = new URL(tsUrl, url).href;
-                    const tsResponse = await fetch(fullTsUrl);
+                    const proxyTsUrl = `${proxyUrl}${encodeURIComponent(fullTsUrl)}`;
+                    const tsResponse = await fetch(proxyTsUrl);
                     const tsBlob = await tsResponse.blob();
                     const localUrl = URL.createObjectURL(tsBlob);
                     localTsUrls.push(localUrl);
                 }
 
-                // Replace TS segment URLs in the playlist with local URLs
+                // Replace TS segment URLs in the playlist with local Blob URLs
                 let modifiedPlaylist = playlist;
                 tsUrls.forEach((tsUrl, index) => {
                     modifiedPlaylist = modifiedPlaylist.replace(tsUrl, localTsUrls[index]);
@@ -65,33 +71,33 @@
 
                 return localM3U8Url;
             } catch (error) {
-                console.error("Error processing M3U8:", error);
+                console.error("Error fetching or modifying the M3U8 playlist:", error);
             }
         }
 
-        // Initialize HLS.js
+        // Initialize HLS.js player
         if (Hls.isSupported()) {
             const hls = new Hls();
 
-            // Process the M3U8 playlist and play the video
-            processM3U8(m3u8Url).then(localM3U8Url => {
+            // Fetch and store the M3U8 playlist and then play it
+            fetchAndStoreM3U8(originalM3U8Url).then((localM3U8Url) => {
                 if (localM3U8Url) {
                     hls.loadSource(localM3U8Url);
                     hls.attachMedia(video);
-                    hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                        console.log("Video is ready to play.");
+                    hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                        console.log("Manifest loaded, video ready to play!");
                     });
                 } else {
-                    console.error("Failed to process the M3U8 playlist.");
+                    console.error("Failed to load the modified M3U8 playlist.");
                 }
             });
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
             // Fallback for Safari
-            processM3U8(m3u8Url).then(localM3U8Url => {
+            fetchAndStoreM3U8(originalM3U8Url).then((localM3U8Url) => {
                 if (localM3U8Url) {
                     video.src = localM3U8Url;
                 } else {
-                    console.error("Failed to process the M3U8 playlist.");
+                    console.error("Failed to load the modified M3U8 playlist.");
                 }
             });
         } else {
