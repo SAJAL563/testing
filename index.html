@@ -43,8 +43,9 @@
         const originalM3U8Url = "https://cors-proxy-fawn.vercel.app/proxy?url=https://d27h84tpitp9e0.cloudfront.net/ivs/v1/916749774596/cv7OeduHYcU8/2025/1/15/7/11/sRjo9dMRool0/media/hls/1080p60/playlist_vod.m3u8";
 
         let modifiedPlaylist = "";
-        let hls = null;
+        let masterPlaylist = "";
         let currentSegments = new Set();
+        let hls = null;
 
         // Initialize Plyr
         const player = new Plyr('#videoPlayer', {
@@ -58,41 +59,42 @@
                 'volume',
                 'settings',
                 'fullscreen'
-            ],
-            settings: ['quality', 'speed'],
-            quality: {
-                default: 1080,
-                options: [1080]
-            }
+            ]
         });
 
-        async function fetchAndStoreM3U8(url) {
+        async function fetchAndStoreM3U8(url, isInitial = false) {
             try {
                 const response = await fetch(url);
                 const playlist = await response.text();
                 const baseUrl = url.match(/.+\//)[0];
 
-                // Parse segments from the new playlist
-                const newSegments = playlist.match(/[^\n]+\.ts/g) || [];
-                const newSegmentsSet = new Set(newSegments);
+                if (isInitial) {
+                    // Store the master playlist structure
+                    masterPlaylist = playlist.split('\n')
+                        .filter(line => line.startsWith('#'))
+                        .join('\n');
+                }
 
-                // Only modify playlist to include new segments
-                newSegments.forEach(segment => {
-                    if (!currentSegments.has(segment)) {
-                        currentSegments.add(segment);
-                        const fullTsUrl = `${baseUrl}${segment}`;
-                        const proxiedUrl = `${proxyUrl}${encodeURIComponent(fullTsUrl)}`;
-                        
-                        if (!modifiedPlaylist.includes(proxiedUrl)) {
-                            modifiedPlaylist += `\n${proxiedUrl}`;
-                        }
+                // Extract new segments
+                const newSegments = [];
+                const lines = playlist.split('\n');
+                for (const line of lines) {
+                    if (line.endsWith('.ts') && !currentSegments.has(line)) {
+                        currentSegments.add(line);
+                        const fullTsUrl = `${baseUrl}${line}`;
+                        newSegments.push(`${proxyUrl}${encodeURIComponent(fullTsUrl)}`);
                     }
-                });
+                }
 
-                // Combine headers and segments
-                const headers = playlist.match(/^#.*$/gm).join('\n');
-                const finalPlaylist = `${headers}${modifiedPlaylist}`;
+                // Add new segments to modified playlist
+                if (newSegments.length > 0) {
+                    modifiedPlaylist += '\n' + newSegments.join('\n');
+                }
 
+                // Combine master playlist structure with segments
+                const finalPlaylist = `${masterPlaylist}\n${modifiedPlaylist}`;
+                
+                // Create blob and return URL
                 const blob = new Blob([finalPlaylist], { type: 'application/x-mpegURL' });
                 return URL.createObjectURL(blob);
 
@@ -102,29 +104,46 @@
             }
         }
 
+        let updateInterval = null;
+
         function initializePlayer(url) {
             if (Hls.isSupported()) {
+                if (hls) {
+                    hls.destroy();
+                }
+
                 hls = new Hls({
-                    debug: false,
-                    enableWorker: true,
-                    lowLatencyMode: true,
-                    backBufferLength: 90,
-                    maxBufferSize: 0,
                     maxBufferLength: 30,
                     maxMaxBufferLength: 600,
+                    maxBufferSize: 60 * 1000 * 1000,
+                    maxBufferHole: 0.5,
+                    highBufferWatchdogPeriod: 2,
+                    nudgeOffset: 0.1,
+                    nudgeMaxRetry: 5,
+                    maxFragLookUpTolerance: 0.25,
+                    liveSyncDurationCount: 3,
+                    enableWorker: true,
+                    startLevel: -1,
+                    debug: false
                 });
 
-                hls.attachMedia(player.media);
+                const video = player.media;
+                hls.attachMedia(video);
 
                 hls.on(Hls.Events.MEDIA_ATTACHED, () => {
                     console.log('HLS media attached');
                     hls.loadSource(url);
+
+                    // Start update interval only after initial load
+                    if (!updateInterval) {
+                        updateInterval = setInterval(updatePlaylist, 10000);
+                    }
                 });
 
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
                     console.log('HLS manifest parsed');
-                    player.play().catch(() => {
-                        console.log("Playback failed, likely due to autoplay policy");
+                    video.play().catch(() => {
+                        console.log("Autoplay prevented");
                     });
                 });
 
@@ -132,51 +151,50 @@
                     if (data.fatal) {
                         switch (data.type) {
                             case Hls.ErrorTypes.NETWORK_ERROR:
-                                console.log('Fatal network error, trying to recover');
                                 hls.startLoad();
                                 break;
                             case Hls.ErrorTypes.MEDIA_ERROR:
-                                console.log('Fatal media error, trying to recover');
                                 hls.recoverMediaError();
-                                break;
-                            default:
-                                console.log('Fatal error, cannot recover');
-                                hls.destroy();
                                 break;
                         }
                     }
                 });
+            }
+        }
 
-            } else if (player.media.canPlayType('application/vnd.apple.mpegurl')) {
-                player.media.src = url;
+        async function updatePlaylist() {
+            if (!hls) return;
+
+            const currentTime = player.media.currentTime;
+            const wasPlaying = !player.media.paused;
+            
+            const newUrl = await fetchAndStoreM3U8(originalM3U8Url);
+            if (newUrl) {
+                // Instead of loading a new source, append segments to the existing playlist
+                hls.trigger(Hls.Events.LEVEL_UPDATED, {
+                    details: {
+                        fragments: Array.from(currentSegments).map(segment => ({
+                            url: segment,
+                            start: currentTime,
+                            duration: 2  // Assuming 2-second segments
+                        }))
+                    }
+                });
             }
         }
 
         // Start the player
-        fetchAndStoreM3U8(originalM3U8Url).then(localUrl => {
+        fetchAndStoreM3U8(originalM3U8Url, true).then(localUrl => {
             if (localUrl) {
                 initializePlayer(localUrl);
-                
-                // Update playlist periodically
-                setInterval(async () => {
-                    const newUrl = await fetchAndStoreM3U8(originalM3U8Url);
-                    if (newUrl && hls) {
-                        const currentTime = player.media.currentTime;
-                        const wasPlaying = !player.media.paused;
-                        
-                        hls.loadSource(newUrl);
-                        
-                        player.media.currentTime = currentTime;
-                        if (wasPlaying) {
-                            player.play();
-                        }
-                    }
-                }, 10000);
             }
         });
 
-        // Handle player destruction on page unload
+        // Cleanup
         window.addEventListener('beforeunload', () => {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
             if (hls) {
                 hls.destroy();
             }
