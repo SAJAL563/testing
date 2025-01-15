@@ -51,7 +51,7 @@
                 // Extract and modify TS segment URLs
                 let modifiedPlaylist = playlist.replace(/([^\n]+\.ts)/g, (match) => {
                     const fullTsUrl = new URL(match, baseUrl).href; // Resolve the full TS URL
-                    const doubleProxyTsUrl = `${proxyUrl}${encodeURIComponent(`${proxyUrl}${encodeURIComponent(fullTsUrl)}`)}`;
+                    const doubleProxyTsUrl = `${proxyUrl}${fullTsUrl}`;
                     return doubleProxyTsUrl;
                 });
 
