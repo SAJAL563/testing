@@ -1,94 +1,91 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Stream Proxy Player</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
-      background-color: #f4f4f4;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pinki KI MKC</title>
+    <style>
+        /* General Reset */
+        body, html {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            height: 100%;
+            background: linear-gradient(135deg, #1a0033, #330066);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
 
-    h1 {
-      color: #333;
-    }
-
-    video {
-      width: 80%;
-      max-width: 800px;
-      height: auto;
-      border: 2px solid #333;
-      border-radius: 8px;
-      background: black;
-    }
-
-    p {
-      margin-top: 20px;
-      font-size: 14px;
-      color: #555;
-    }
-  </style>
+        /* Video Player Styling */
+        video {
+            width: 90%;
+            height: auto;
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+    </style>
 </head>
 <body>
-  <h1>Stream Proxy Player</h1>
-  <video id="videoPlayer" controls autoplay></video>
-  <p>Powered by a CORS Proxy to bypass restrictions.</p>
+    <video id="videoPlayer" controls></video>
 
-  <!-- Load HLS.js library -->
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script>
+        const proxyUrl = "https://cors-proxy-fawn.vercel.app/proxy?url=";
+        const originalM3U8Url = "https://c2ee45b2888d.eu-west-1.playback.live-video.net/api/video/v1/eu-west-1.916749774596.channel.HTMDlI86P1LJ.m3u8";
 
-  <script>
-    // Proxy URL
-    const proxyUrl = "https://cors-proxy-fawn.vercel.app/proxy?url=";
+        const video = document.getElementById('videoPlayer');
 
-    // Override fetch to prepend proxy URL
-    const originalFetch = window.fetch;
-    window.fetch = async (input, init) => {
-      if (typeof input === "string" && !input.startsWith(proxyUrl)) {
-        input = proxyUrl + encodeURIComponent(input);
-      } else if (input.url && !input.url.startsWith(proxyUrl)) {
-        input.url = proxyUrl + encodeURIComponent(input.url);
-      }
-      return originalFetch(input, init);
-    };
+        // Function to modify the M3U8 playlist
+        async function fetchAndModifyM3U8(url) {
+            try {
+                // Fetch the playlist from the original URL
+                const response = await fetch(url);
+                const playlist = await response.text();
 
-    // Override XMLHttpRequest to prepend proxy URL
-    const originalOpen = XMLHttpRequest.prototype.open;
-    XMLHttpRequest.prototype.open = function (method, url, ...rest) {
-      if (!url.startsWith(proxyUrl)) {
-        url = proxyUrl + encodeURIComponent(url);
-      }
-      originalOpen.call(this, method, url, ...rest);
-    };
+                // Modify the playlist by replacing .ts URLs with proxy URLs
+                const modifiedPlaylist = playlist.replace(/([^\n]+\.ts)/g, (match) => {
+                    const tsRelativeUrl = match.trim();
+                    const fullTsUrl = new URL(tsRelativeUrl, url).href;
+                    const proxyTsUrl = `${proxyUrl}${encodeURIComponent(fullTsUrl)}`;
+                    return proxyTsUrl;
+                });
 
-    // Initialize HLS.js once the library is loaded
-    window.addEventListener("load", () => {
-      const videoPlayer = document.getElementById("videoPlayer");
-      const m3u8Url = "https://d27h84tpitp9e0.cloudfront.net/ivs/v1/916749774596/cv7OeduHYcU8/2025/1/15/7/11/sRjo9dMRool0/media/hls/1080p60/playlist_vod.m3u8"; // Replace with your m3u8 URL
+                // Create a Blob with the modified M3U8 content
+                const blob = new Blob([modifiedPlaylist], { type: 'application/x-mpegURL' });
+                const modifiedM3U8Url = URL.createObjectURL(blob);
 
-      if (Hls.isSupported()) {
-        const hls = new Hls();
-        hls.loadSource(proxyUrl + encodeURIComponent(m3u8Url));
-        hls.attachMedia(videoPlayer);
-        hls.on(Hls.Events.MANIFEST_PARSED, function () {
-          videoPlayer.play();
-        });
-      } else if (videoPlayer.canPlayType("application/vnd.apple.mpegurl")) {
-        videoPlayer.src = proxyUrl + encodeURIComponent(m3u8Url);
-        videoPlayer.addEventListener("loadedmetadata", function () {
-          videoPlayer.play();
-        });
-      } else {
-        alert("Your browser does not support HLS playback.");
-      }
-    });
-  </script>
+                return modifiedM3U8Url;
+            } catch (error) {
+                console.error("Error fetching or modifying the M3U8 playlist:", error);
+            }
+        }
+
+        // Initialize HLS.js player when the browser supports it
+        if (Hls.isSupported()) {
+            const hls = new Hls();
+
+            // Fetch and modify the M3U8 playlist, then play the video
+            fetchAndModifyM3U8(originalM3U8Url).then((modifiedM3U8Url) => {
+                if (modifiedM3U8Url) {
+                    // Set the modified M3U8 as the source for HLS.js
+                    hls.loadSource(modifiedM3U8Url);
+                    hls.attachMedia(video);
+                    hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                        console.log("Manifest loaded, video ready to play!");
+                    });
+                } else {
+                    console.error("Failed to load the modified M3U8 playlist.");
+                }
+            });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            // Fallback for Safari
+            video.src = originalM3U8Url;
+        } else {
+            alert("Your browser does not support HLS streaming.");
+        }
+    </script>
 </body>
 </html>
