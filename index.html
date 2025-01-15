@@ -51,10 +51,15 @@
                 // Download and store each TS segment locally
                 const localTsUrls = [];
                 for (const tsUrl of tsUrls) {
+                    // Construct the double-proxy URL for each .ts segment
                     const fullTsUrl = new URL(tsUrl, url).href;
-                    const proxyTsUrl = `${proxyUrl}${encodeURIComponent(fullTsUrl)}`;
-                    const tsResponse = await fetch(proxyTsUrl);
+                    const doubleProxyTsUrl = `${proxyUrl}${encodeURIComponent(`${proxyUrl}${encodeURIComponent(fullTsUrl)}`)}`;
+                    
+                    // Fetch the .ts segment using the double-proxy URL
+                    const tsResponse = await fetch(doubleProxyTsUrl);
                     const tsBlob = await tsResponse.blob();
+
+                    // Store the segment locally and save the local Blob URL
                     const localUrl = URL.createObjectURL(tsBlob);
                     localTsUrls.push(localUrl);
                 }
