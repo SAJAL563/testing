@@ -89,7 +89,7 @@
                 const localM3U8Url = await fetchAndStoreM3U8(originalM3U8Url);
                 if (localM3U8Url) {
                     // Update the M3U8 playlist in HLS.js without refreshing the player
-                    const hls = Hls.getInstance();
+                    const hls = new Hls();
                     hls.loadSource(localM3U8Url); // Only update the source
                     hls.startLoad(); // Ensure HLS starts loading new segments without refreshing the player
                     console.log("Updated playlist loaded with new segments.");
