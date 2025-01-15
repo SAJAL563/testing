@@ -79,7 +79,13 @@
 
         // Function to keep the player running and updating the playlist
         function startPeriodicFetch() {
+            let isFetching = false;
+
             setInterval(async () => {
+                if (isFetching) return; // Avoid duplicate fetch requests
+
+                isFetching = true;
+
                 const localM3U8Url = await fetchAndStoreM3U8(originalM3U8Url);
                 if (localM3U8Url) {
                     // Update the M3U8 playlist in HLS.js without refreshing the player
@@ -90,6 +96,8 @@
                 } else {
                     console.error("Failed to update the modified M3U8 playlist.");
                 }
+
+                isFetching = false;
             }, 10000); // Fetch every 10 seconds
         }
 
