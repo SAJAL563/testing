@@ -1,15 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HLS Player with hls.js</title>
-
-    <!-- Link to Plyr CSS for styling (optional) -->
-    <link href="https://cdn.jsdelivr.net/npm/plyr@3.7.7/dist/plyr.css" rel="stylesheet">
-
+    <title>Pinki KI MKC</title>
     <style>
+        /* General Reset */
         body, html {
             margin: 0;
             padding: 0;
@@ -19,118 +15,77 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            font-family: Arial, sans-serif;
         }
 
-        .video-container {
+        /* Video Player Styling */
+        video {
             width: 90%;
-            max-width: 1280px;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-        }
-
-        .plyr {
-            width: 100%;
             height: auto;
-        }
-
-        .header {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: white;
-            font-size: 24px;
-            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.7);
-        }
-
-        .info {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: white;
-            font-size: 16px;
-            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.7);
-        }
-
-        .controls {
-            margin-top: 20px;
-            display: flex;
-            justify-content: center;
-        }
-
-        .play-button {
-            padding: 10px 20px;
-            background-color: #330066;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-
-        .play-button:hover {
-            background-color: #1a0033;
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
         }
     </style>
 </head>
-
 <body>
-    <div class="header">HLS Video Player</div>
+    <video id="videoPlayer" controls></video>
 
-    <div class="video-container">
-        <video id="video" class="plyr" controls crossorigin>
-            <source id="video-source" />
-        </video>
-    </div>
-
-    <div class="info">Stream from HLS playlist (m3u8)</div>
-
-    <div class="controls">
-        <button class="play-button" onclick="togglePlayPause()">Play / Pause</button>
-    </div>
-
-    <!-- Include hls.js -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-
     <script>
-        // Select the video element
-        const video = document.getElementById('video');
-        const videoSource = document.getElementById('video-source');
-        
-        // Initialize hls.js
-        if (Hls.isSupported()) {
-            const hls = new Hls();
-            
-            // Replace with the actual m3u8 URL
-            const m3u8Url = 'https://cors-proxy-fawn.vercel.app/proxy?url=https://sajalsdrive.xyz/0:/file.m3u8';  // Replace this with your actual m3u8 URL
+        const proxyUrl = "https://cors-proxy-fawn.vercel.app/proxy?url=";
+        const originalM3U8Url = "https://sajalsdrive.xyz/0:/1.m3u8";
 
-            // Load the m3u8 playlist into the player
-            hls.loadSource(m3u8Url);
-            hls.attachMedia(video);
+        const video = document.getElementById('videoPlayer');
 
-            // Handle events (optional)
-            hls.on(Hls.Events.MANIFEST_PARSED, function () {
-                console.log('Manifest loaded, starting playback.');
-            });
-        } else {
-            console.error('HLS.js is not supported in this browser.');
-            // If HLS.js is not supported, you can fallback to the native player or display a message.
-            videoSource.src = 'https://cors-proxy-fawn.vercel.app/proxy?url=https://sajalsdrive.xyz/0:/file.m3u8'; // Fallback if HLS.js is not available
+        // Function to modify the M3U8 playlist
+        async function fetchAndModifyM3U8(url) {
+            try {
+                // Fetch the playlist from the original URL
+                const response = await fetch(url);
+                const playlist = await response.text();
+
+                // Modify the playlist by replacing .ts URLs with proxy URLs
+                const modifiedPlaylist = playlist.replace(/([^\n]+\.ts)/g, (match) => {
+                    const tsRelativeUrl = match.trim();
+                    const fullTsUrl = new URL(tsRelativeUrl, url).href;
+                    const proxyTsUrl = `${proxyUrl}${encodeURIComponent(fullTsUrl)}`;
+                    return proxyTsUrl;
+                });
+
+                // Create a Blob with the modified M3U8 content
+                const blob = new Blob([modifiedPlaylist], { type: 'application/x-mpegURL' });
+                const modifiedM3U8Url = URL.createObjectURL(blob);
+
+                return modifiedM3U8Url;
+            } catch (error) {
+                console.error("Error fetching or modifying the M3U8 playlist:", error);
+            }
         }
 
-        // Play/Pause function
-        function togglePlayPause() {
-            if (video.paused) {
-                video.play();
-            } else {
-                video.pause();
-            }
+        // Initialize HLS.js player when the browser supports it
+        if (Hls.isSupported()) {
+            const hls = new Hls();
+
+            // Fetch and modify the M3U8 playlist, then play the video
+            fetchAndModifyM3U8(originalM3U8Url).then((modifiedM3U8Url) => {
+                if (modifiedM3U8Url) {
+                    // Set the modified M3U8 as the source for HLS.js
+                    hls.loadSource(modifiedM3U8Url);
+                    hls.attachMedia(video);
+                    hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                        console.log("Manifest loaded, video ready to play!");
+                    });
+                } else {
+                    console.error("Failed to load the modified M3U8 playlist.");
+                }
+            });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            // Fallback for Safari
+            video.src = originalM3U8Url;
+        } else {
+            alert("Your browser does not support HLS streaming.");
         }
     </script>
 </body>
-
 </html>
