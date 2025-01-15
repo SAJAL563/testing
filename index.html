@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Video Player</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/plyr/3.7.8/plyr.css" />
     <style>
         body, html {
             margin: 0;
@@ -16,141 +17,171 @@
             align-items: center;
         }
 
-        video {
+        .video-container {
             width: 90%;
-            height: auto;
-            max-width: 100%;
-            max-height: 100%;
+            max-width: 1280px;
             border-radius: 10px;
+            overflow: hidden;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .plyr {
+            width: 100%;
+            height: auto;
         }
     </style>
 </head>
 <body>
-    <video id="videoPlayer" controls></video>
+    <div class="video-container">
+        <video id="videoPlayer"></video>
+    </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plyr/3.7.8/plyr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script>
         const proxyUrl = "https://cors-proxy-fawn.vercel.app/proxy?url=";
         const originalM3U8Url = "https://cors-proxy-fawn.vercel.app/proxy?url=https://d27h84tpitp9e0.cloudfront.net/ivs/v1/916749774596/cv7OeduHYcU8/2025/1/15/7/11/sRjo9dMRool0/media/hls/1080p60/playlist_vod.m3u8";
 
-        class HLSPlayer {
-            constructor(videoElement) {
-                this.video = videoElement;
-                this.mediaSource = new MediaSource();
-                this.sourceBuffer = null;
-                this.segments = new Set();
-                this.pendingSegments = [];
-                this.isUpdating = false;
-                this.baseUrl = '';
+        let modifiedPlaylist = "";
+        let hls = null;
+        let currentSegments = new Set();
 
-                this.video.src = URL.createObjectURL(this.mediaSource);
-                this.mediaSource.addEventListener('sourceopen', () => this.onSourceOpen());
+        // Initialize Plyr
+        const player = new Plyr('#videoPlayer', {
+            controls: [
+                'play-large',
+                'play',
+                'progress',
+                'current-time',
+                'duration',
+                'mute',
+                'volume',
+                'settings',
+                'fullscreen'
+            ],
+            settings: ['quality', 'speed'],
+            quality: {
+                default: 1080,
+                options: [1080]
             }
+        });
 
-            async onSourceOpen() {
-                this.sourceBuffer = this.mediaSource.addSourceBuffer('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');
-                this.sourceBuffer.mode = 'segments';
-                this.sourceBuffer.addEventListener('updateend', () => this.onUpdateEnd());
-                await this.initializePlaylist();
-            }
+        async function fetchAndStoreM3U8(url) {
+            try {
+                const response = await fetch(url);
+                const playlist = await response.text();
+                const baseUrl = url.match(/.+\//)[0];
 
-            async initializePlaylist() {
-                try {
-                    const playlist = await this.fetchPlaylist();
-                    this.baseUrl = this.getBaseUrl();
-                    const segments = this.parsePlaylist(playlist);
-                    await this.loadInitialSegments(segments);
-                } catch (error) {
-                    console.error('Error initializing playlist:', error);
-                }
-            }
+                // Parse segments from the new playlist
+                const newSegments = playlist.match(/[^\n]+\.ts/g) || [];
+                const newSegmentsSet = new Set(newSegments);
 
-            async fetchPlaylist() {
-                const response = await fetch(originalM3U8Url);
-                return await response.text();
-            }
-
-            getBaseUrl() {
-                return originalM3U8Url.match(/.+\//)[0];
-            }
-
-            parsePlaylist(playlist) {
-                const lines = playlist.split('\n');
-                const segments = [];
-                for (let i = 0; i < lines.length; i++) {
-                    if (lines[i].endsWith('.ts')) {
-                        segments.push(lines[i]);
-                    }
-                }
-                return segments;
-            }
-
-            async loadInitialSegments(segments) {
-                for (const segment of segments) {
-                    if (!this.segments.has(segment)) {
-                        this.segments.add(segment);
-                        await this.fetchAndAppendSegment(segment);
-                    }
-                }
-            }
-
-            async fetchAndAppendSegment(segmentUrl) {
-                try {
-                    const fullUrl = `${proxyUrl}${this.baseUrl}${segmentUrl}`;
-                    const response = await fetch(fullUrl);
-                    const data = await response.arrayBuffer();
-                    
-                    if (this.sourceBuffer.updating) {
-                        this.pendingSegments.push(data);
-                    } else {
-                        this.appendSegment(data);
-                    }
-                } catch (error) {
-                    console.error('Error fetching segment:', error);
-                }
-            }
-
-            appendSegment(data) {
-                try {
-                    this.sourceBuffer.appendBuffer(data);
-                } catch (error) {
-                    console.error('Error appending segment:', error);
-                }
-            }
-
-            onUpdateEnd() {
-                this.isUpdating = false;
-                if (this.pendingSegments.length > 0) {
-                    const nextSegment = this.pendingSegments.shift();
-                    this.appendSegment(nextSegment);
-                }
-            }
-
-            async checkForNewSegments() {
-                try {
-                    const playlist = await this.fetchPlaylist();
-                    const newSegments = this.parsePlaylist(playlist);
-                    
-                    for (const segment of newSegments) {
-                        if (!this.segments.has(segment)) {
-                            this.segments.add(segment);
-                            await this.fetchAndAppendSegment(segment);
+                // Only modify playlist to include new segments
+                newSegments.forEach(segment => {
+                    if (!currentSegments.has(segment)) {
+                        currentSegments.add(segment);
+                        const fullTsUrl = `${baseUrl}${segment}`;
+                        const proxiedUrl = `${proxyUrl}${encodeURIComponent(fullTsUrl)}`;
+                        
+                        if (!modifiedPlaylist.includes(proxiedUrl)) {
+                            modifiedPlaylist += `\n${proxiedUrl}`;
                         }
                     }
-                } catch (error) {
-                    console.error('Error checking for new segments:', error);
-                }
+                });
+
+                // Combine headers and segments
+                const headers = playlist.match(/^#.*$/gm).join('\n');
+                const finalPlaylist = `${headers}${modifiedPlaylist}`;
+
+                const blob = new Blob([finalPlaylist], { type: 'application/x-mpegURL' });
+                return URL.createObjectURL(blob);
+
+            } catch (error) {
+                console.error("Error fetching or modifying the M3U8 playlist:", error);
+                return null;
             }
         }
 
-        // Initialize the player
-        const video = document.getElementById('videoPlayer');
-        const player = new HLSPlayer(video);
+        function initializePlayer(url) {
+            if (Hls.isSupported()) {
+                hls = new Hls({
+                    debug: false,
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                    backBufferLength: 90,
+                    maxBufferSize: 0,
+                    maxBufferLength: 30,
+                    maxMaxBufferLength: 600,
+                });
 
-        // Periodically check for new segments
-        setInterval(() => {
-            player.checkForNewSegments();
-        }, 10000);
+                hls.attachMedia(player.media);
+
+                hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+                    console.log('HLS media attached');
+                    hls.loadSource(url);
+                });
+
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    console.log('HLS manifest parsed');
+                    player.play().catch(() => {
+                        console.log("Playback failed, likely due to autoplay policy");
+                    });
+                });
+
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    if (data.fatal) {
+                        switch (data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                console.log('Fatal network error, trying to recover');
+                                hls.startLoad();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                console.log('Fatal media error, trying to recover');
+                                hls.recoverMediaError();
+                                break;
+                            default:
+                                console.log('Fatal error, cannot recover');
+                                hls.destroy();
+                                break;
+                        }
+                    }
+                });
+
+            } else if (player.media.canPlayType('application/vnd.apple.mpegurl')) {
+                player.media.src = url;
+            }
+        }
+
+        // Start the player
+        fetchAndStoreM3U8(originalM3U8Url).then(localUrl => {
+            if (localUrl) {
+                initializePlayer(localUrl);
+                
+                // Update playlist periodically
+                setInterval(async () => {
+                    const newUrl = await fetchAndStoreM3U8(originalM3U8Url);
+                    if (newUrl && hls) {
+                        const currentTime = player.media.currentTime;
+                        const wasPlaying = !player.media.paused;
+                        
+                        hls.loadSource(newUrl);
+                        
+                        player.media.currentTime = currentTime;
+                        if (wasPlaying) {
+                            player.play();
+                        }
+                    }
+                }, 10000);
+            }
+        });
+
+        // Handle player destruction on page unload
+        window.addEventListener('beforeunload', () => {
+            if (hls) {
+                hls.destroy();
+            }
+            player.destroy();
+        });
     </script>
 </body>
 </html>
