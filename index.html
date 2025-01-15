@@ -1,10 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Player</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/plyr/3.7.8/plyr.css" />
+    <title>HLS Player</title>
+    
+    <!-- Link to Plyr CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/plyr@3.7.7/dist/plyr.css" rel="stylesheet">
+
     <style>
         body, html {
             margin: 0;
@@ -15,6 +19,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            font-family: Arial, sans-serif;
         }
 
         .video-container {
@@ -29,179 +34,83 @@
             width: 100%;
             height: auto;
         }
+
+        .header {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 24px;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.7);
+        }
+
+        .info {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 16px;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.7);
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .play-button {
+            padding: 10px 20px;
+            background-color: #330066;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .play-button:hover {
+            background-color: #1a0033;
+        }
     </style>
 </head>
+
 <body>
+    <div class="header">HLS Video Player</div>
+
     <div class="video-container">
-        <video id="videoPlayer"></video>
+        <video id="player" class="plyr" controls crossorigin>
+            <source src="https://cors-proxy-fawn.vercel.app/proxy?url=https://sajalsdrive.xyz/0:/file.m3u8" type="application/x-mpegURL" />
+        </video>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/plyr/3.7.8/plyr.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <div class="info">Stream from HLS playlist (m3u8)</div>
+
+    <div class="controls">
+        <button class="play-button" onclick="togglePlayPause()">Play / Pause</button>
+    </div>
+
+    <!-- Include Plyr.js -->
+    <script src="https://cdn.jsdelivr.net/npm/plyr@3.7.7/dist/plyr.polyfilled.js"></script>
+
     <script>
-        const proxyUrl = "https://cors-proxy-fawn.vercel.app/proxy?url=";
-        const originalM3U8Url = "https://cors-proxy-fawn.vercel.app/proxy?url=https://d27h84tpitp9e0.cloudfront.net/ivs/v1/916749774596/cv7OeduHYcU8/2025/1/15/7/11/sRjo9dMRool0/media/hls/1080p60/playlist_vod.m3u8";
-
-        let modifiedPlaylist = "";
-        let currentSegments = new Set();
-        let lastSequenceNumber = 0;
-        let hls = null;
-
-        const player = new Plyr('#videoPlayer', {
-            controls: [
-                'play-large',
-                'play',
-                'progress',
-                'current-time',
-                'duration',
-                'mute',
-                'volume',
-                'settings',
-                'fullscreen'
-            ]
+        const player = new Plyr('#player', {
+            autoplay: true,
+            controls: ['play', 'progress', 'current-time', 'mute', 'volume', 'fullscreen']
         });
 
-        async function fetchAndStoreM3U8(url) {
-            try {
-                const response = await fetch(url);
-                const playlist = await response.text();
-                const baseUrl = url.match(/.+\//)[0];
-
-                // Extract and preserve playlist headers
-                const headers = playlist
-                    .split('\n')
-                    .filter(line => line.startsWith('#'))
-                    .join('\n');
-
-                // Extract new segments while maintaining order
-                const segments = playlist
-                    .split('\n')
-                    .filter(line => line.endsWith('.ts'))
-                    .map((segment, index) => {
-                        const fullTsUrl = `${baseUrl}${segment}`;
-                        return {
-                            url: `${proxyUrl}${encodeURIComponent(fullTsUrl)}`,
-                            originalUrl: segment,
-                            sequenceNumber: lastSequenceNumber + index
-                        };
-                    });
-
-                // Update sequence number for next batch
-                if (segments.length > 0) {
-                    lastSequenceNumber = segments[segments.length - 1].sequenceNumber + 1;
-                }
-
-                // Add new segments to the modified playlist
-                let newSegmentsAdded = false;
-                segments.forEach(segment => {
-                    if (!currentSegments.has(segment.originalUrl)) {
-                        currentSegments.add(segment.originalUrl);
-                        modifiedPlaylist += `\n#EXTINF:2.0,\n${segment.url}`;
-                        newSegmentsAdded = true;
-                    }
-                });
-
-                if (newSegmentsAdded) {
-                    // Create a valid HLS playlist with proper headers
-                    const finalPlaylist = `#EXTM3U
-#EXT-X-VERSION:3
-#EXT-X-TARGETDURATION:2
-#EXT-X-MEDIA-SEQUENCE:${Math.max(0, lastSequenceNumber - segments.length)}
-${modifiedPlaylist}`;
-
-                    const blob = new Blob([finalPlaylist], { type: 'application/x-mpegURL' });
-                    return URL.createObjectURL(blob);
-                }
-
-                return null;
-            } catch (error) {
-                console.error("Error fetching or modifying the M3U8 playlist:", error);
-                return null;
+        // Function to toggle play and pause
+        function togglePlayPause() {
+            if (player.playing) {
+                player.pause();
+            } else {
+                player.play();
             }
         }
-
-        function initializePlayer(url) {
-            if (Hls.isSupported()) {
-                if (!hls) {
-                    hls = new Hls({
-                        maxBufferLength: 30,
-                        maxMaxBufferLength: 600,
-                        maxBufferSize: 60 * 1000 * 1000,
-                        maxBufferHole: 0.5,
-                        highBufferWatchdogPeriod: 2,
-                        liveSyncDurationCount: 3,
-                        enableWorker: true,
-                        fragLoadingTimeOut: 20000,
-                        manifestLoadingTimeOut: 20000,
-                        levelLoadingTimeOut: 20000,
-                        fragLoadingMaxRetry: 6,
-                        manifestLoadingMaxRetry: 6,
-                        levelLoadingMaxRetry: 6
-                    });
-
-                    hls.attachMedia(player.media);
-
-                    hls.on(Hls.Events.MEDIA_ATTACHED, () => {
-                        console.log('Media attached');
-                        loadAndPlay(url);
-                    });
-
-                    hls.on(Hls.Events.ERROR, (event, data) => {
-                        if (data.fatal) {
-                            switch(data.type) {
-                                case Hls.ErrorTypes.NETWORK_ERROR:
-                                    hls.startLoad();
-                                    break;
-                                case Hls.ErrorTypes.MEDIA_ERROR:
-                                    hls.recoverMediaError();
-                                    break;
-                            }
-                        }
-                    });
-                } else {
-                    loadAndPlay(url);
-                }
-            }
-        }
-
-        function loadAndPlay(url) {
-            const currentTime = player.media.currentTime;
-            const wasPlaying = !player.media.paused;
-
-            hls.loadSource(url);
-            
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                if (wasPlaying) {
-                    player.media.currentTime = currentTime;
-                    player.media.play().catch(() => {
-                        console.log("Playback prevented");
-                    });
-                }
-            });
-        }
-
-        // Start the player
-        fetchAndStoreM3U8(originalM3U8Url).then(localUrl => {
-            if (localUrl) {
-                initializePlayer(localUrl);
-
-                // Update playlist periodically
-                setInterval(async () => {
-                    const newUrl = await fetchAndStoreM3U8(originalM3U8Url);
-                    if (newUrl) {
-                        initializePlayer(newUrl);
-                    }
-                }, 10000);
-            }
-        });
-
-        // Cleanup
-        window.addEventListener('beforeunload', () => {
-            if (hls) {
-                hls.destroy();
-            }
-            player.destroy();
-        });
     </script>
 </body>
+
 </html>
