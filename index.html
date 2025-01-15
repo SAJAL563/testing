@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pinki KI MKC</title>
     <style>
-        /* General Reset */
         body, html {
             margin: 0;
             padding: 0;
@@ -17,7 +16,6 @@
             align-items: center;
         }
 
-        /* Video Player Styling */
         video {
             width: 90%;
             height: auto;
@@ -46,13 +44,12 @@
                 const playlist = await response.text();
 
                 // Base URL for resolving relative TS URLs
-                const baseUrl = url.replace(/\/playlist_vod\.m3u8$/, "/");
+                const baseUrl = url.match(/.+\//)[0]; // Get the base URL from the M3U8 URL
 
                 // Extract and modify TS segment URLs
                 let modifiedPlaylist = playlist.replace(/([^\n]+\.ts)/g, (match) => {
-                    const fullTsUrl = new URL(match, baseUrl).href; // Resolve the full TS URL
-                    const doubleProxyTsUrl = `${proxyUrl}${fullTsUrl}`;
-                    return doubleProxyTsUrl;
+                    const fullTsUrl = `${baseUrl}${match}`; // Construct the full TS URL
+                    return `${proxyUrl}${fullTsUrl}`; // Prepend with the proxy URL
                 });
 
                 // Create a Blob for the modified M3U8 playlist
