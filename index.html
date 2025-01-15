@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Video Player</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/video.js/7.20.3/video-js.min.css" rel="stylesheet">
     <style>
         body, html {
             margin: 0;
@@ -20,115 +19,107 @@
         .video-container {
             width: 90%;
             max-width: 1280px;
-            margin: auto;
+            position: relative;
         }
 
-        .video-js {
+        video {
             width: 100%;
             height: auto;
-            aspect-ratio: 16/9;
             border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-        }
-
-        .vjs-poster {
-            border-radius: 10px;
         }
     </style>
 </head>
 <body>
     <div class="video-container">
-        <video id="videoPlayer" class="video-js vjs-default-skin vjs-big-play-centered">
-            <p class="vjs-no-js">
-                To view this video please enable JavaScript, and consider upgrading to a web browser that supports HTML5 video
-            </p>
-        </video>
+        <video id="video" controls autoplay></video>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/video.js/7.20.3/video.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.3/shaka-player.compiled.js"></script>
     <script>
         const proxyUrl = "https://cors-proxy-fawn.vercel.app/proxy?url=";
         const originalM3U8Url = "https://cors-proxy-fawn.vercel.app/proxy?url=https://d27h84tpitp9e0.cloudfront.net/ivs/v1/916749774596/cv7OeduHYcU8/2025/1/15/7/11/sRjo9dMRool0/media/hls/1080p60/playlist_vod.m3u8";
 
-        // Initialize video.js player
-        const player = videojs('videoPlayer', {
-            controls: true,
-            autoplay: false,
-            preload: 'auto',
-            fluid: true,
-            html5: {
-                hls: {
-                    enableLowInitialPlaylist: true,
-                    smoothQualityChange: true,
-                    overrideNative: true
-                }
-            }
-        });
+        async function initPlayer() {
+            // Install built-in polyfills to patch browser incompatibilities
+            shaka.polyfill.installAll();
 
-        // Function to fetch and modify the M3U8 playlist
-        async function fetchAndModifyM3U8(url) {
+            // Check if the browser supports the player
+            if (!shaka.Player.isBrowserSupported()) {
+                console.error('Browser not supported!');
+                return;
+            }
+
             try {
-                const response = await fetch(url);
-                const playlist = await response.text();
-                
-                // Base URL for resolving relative TS URLs
-                const baseUrl = url.match(/.+\//)[0];
+                // Create a Player instance
+                const video = document.getElementById('video');
+                const player = new shaka.Player(video);
 
-                // Modify TS segment URLs to use proxy
-                const modifiedPlaylist = playlist.replace(/([^\n]+\.ts)/g, (match) => {
-                    const fullTsUrl = `${baseUrl}${match}`;
-                    return `${proxyUrl}${encodeURIComponent(fullTsUrl)}`;
-                });
-
-                // Create a Blob for the modified playlist
-                const blob = new Blob([modifiedPlaylist], { type: 'application/x-mpegURL' });
-                return URL.createObjectURL(blob);
-            } catch (error) {
-                console.error("Error modifying M3U8:", error);
-                return null;
-            }
-        }
-
-        // Function to update the source and maintain playback
-        async function updateSource() {
-            const currentTime = player.currentTime();
-            const isPlaying = !player.paused();
-
-            const modifiedUrl = await fetchAndModifyM3U8(originalM3U8Url);
-            if (modifiedUrl) {
-                player.src({
-                    src: modifiedUrl,
-                    type: 'application/x-mpegURL'
-                });
-
-                // Restore playback state
-                player.one('loadedmetadata', () => {
-                    player.currentTime(currentTime);
-                    if (isPlaying) {
-                        player.play();
+                // Configure player: force HTTP even if HTTPS is available
+                player.configure({
+                    streaming: {
+                        retryParameters: {
+                            maxAttempts: 5,
+                            baseDelay: 1000,
+                            backoffFactor: 2,
+                            fuzzFactor: 0.5
+                        },
+                        bufferingGoal: 60,
+                        rebufferingGoal: 2,
+                        bufferBehind: 30
+                    },
+                    manifest: {
+                        retryParameters: {
+                            maxAttempts: 5,
+                            baseDelay: 1000,
+                            backoffFactor: 2,
+                            fuzzFactor: 0.5
+                        }
                     }
                 });
+
+                // Listen for errors
+                player.addEventListener('error', onError);
+
+                // Create custom network filter to handle proxy URLs
+                player.getNetworkingEngine().registerRequestFilter((type, request) => {
+                    // Only modify segment requests
+                    if (type == shaka.net.NetworkingEngine.RequestType.SEGMENT) {
+                        request.uris = request.uris.map(uri => {
+                            if (!uri.startsWith(proxyUrl)) {
+                                return `${proxyUrl}${encodeURIComponent(uri)}`;
+                            }
+                            return uri;
+                        });
+                    }
+                });
+
+                // Load the manifest
+                await player.load(originalM3U8Url);
+
+                // Update manifest periodically
+                setInterval(async () => {
+                    try {
+                        const currentTime = video.currentTime;
+                        await player.load(originalM3U8Url);
+                        video.currentTime = currentTime;
+                    } catch (error) {
+                        console.error('Error updating manifest:', error);
+                    }
+                }, 10000);
+
+                console.log('The video has now been loaded!');
+            } catch (error) {
+                onError(error);
             }
         }
 
-        // Initial source setup
-        (async () => {
-            const modifiedUrl = await fetchAndModifyM3U8(originalM3U8Url);
-            if (modifiedUrl) {
-                player.src({
-                    src: modifiedUrl,
-                    type: 'application/x-mpegURL'
-                });
-            }
-        })();
+        function onError(error) {
+            console.error('Error code', error.code, 'object', error);
+        }
 
-        // Periodically update the source while maintaining playback
-        setInterval(updateSource, 10000);
-
-        // Clean up on page unload
-        window.addEventListener('beforeunload', () => {
-            player.dispose();
-        });
+        // Listen to the load event to initialize the player
+        document.addEventListener('DOMContentLoaded', initPlayer);
     </script>
 </body>
 </html>
