@@ -41,6 +41,9 @@
   <video id="videoPlayer" controls autoplay></video>
   <p>Powered by a CORS Proxy to bypass restrictions.</p>
 
+  <!-- Load HLS.js library -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
   <script>
     // Proxy URL
     const proxyUrl = "https://cors-proxy-fawn.vercel.app/proxy?url=";
@@ -65,26 +68,27 @@
       originalOpen.call(this, method, url, ...rest);
     };
 
-    // Example: Load an m3u8 stream
-    const videoPlayer = document.getElementById("videoPlayer");
-    const m3u8Url = "https://sajalsdrive.xyz/0:/1.m3u8"; // Replace with your m3u8 URL
+    // Initialize HLS.js once the library is loaded
+    window.addEventListener("load", () => {
+      const videoPlayer = document.getElementById("videoPlayer");
+      const m3u8Url = "YOUR_M3U8_STREAM_URL_HERE"; // Replace with your m3u8 URL
 
-    if (Hls.isSupported()) {
-      const hls = new Hls();
-      hls.loadSource(proxyUrl + encodeURIComponent(m3u8Url));
-      hls.attachMedia(videoPlayer);
-      hls.on(Hls.Events.MANIFEST_PARSED, function () {
-        videoPlayer.play();
-      });
-    } else if (videoPlayer.canPlayType("application/vnd.apple.mpegurl")) {
-      videoPlayer.src = proxyUrl + encodeURIComponent(m3u8Url);
-      videoPlayer.addEventListener("loadedmetadata", function () {
-        videoPlayer.play();
-      });
-    } else {
-      alert("Your browser does not support HLS playback.");
-    }
+      if (Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(proxyUrl + encodeURIComponent(m3u8Url));
+        hls.attachMedia(videoPlayer);
+        hls.on(Hls.Events.MANIFEST_PARSED, function () {
+          videoPlayer.play();
+        });
+      } else if (videoPlayer.canPlayType("application/vnd.apple.mpegurl")) {
+        videoPlayer.src = proxyUrl + encodeURIComponent(m3u8Url);
+        videoPlayer.addEventListener("loadedmetadata", function () {
+          videoPlayer.play();
+        });
+      } else {
+        alert("Your browser does not support HLS playback.");
+      }
+    });
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </body>
 </html>
