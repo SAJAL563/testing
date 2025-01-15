@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HLS Player</title>
-    
-    <!-- Link to Plyr CSS -->
+    <title>HLS Player with hls.js</title>
+
+    <!-- Link to Plyr CSS for styling (optional) -->
     <link href="https://cdn.jsdelivr.net/npm/plyr@3.7.7/dist/plyr.css" rel="stylesheet">
 
     <style>
@@ -82,8 +82,8 @@
     <div class="header">HLS Video Player</div>
 
     <div class="video-container">
-        <video id="player" class="plyr" controls crossorigin>
-            <source src="https://cors-proxy-fawn.vercel.app/proxy?url=https://sajalsdrive.xyz/0:/file.m3u8" type="application/x-mpegURL" />
+        <video id="video" class="plyr" controls crossorigin>
+            <source id="video-source" />
         </video>
     </div>
 
@@ -93,21 +93,41 @@
         <button class="play-button" onclick="togglePlayPause()">Play / Pause</button>
     </div>
 
-    <!-- Include Plyr.js -->
-    <script src="https://cdn.jsdelivr.net/npm/plyr@3.7.7/dist/plyr.polyfilled.js"></script>
+    <!-- Include hls.js -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
     <script>
-        const player = new Plyr('#player', {
-            autoplay: true,
-            controls: ['play', 'progress', 'current-time', 'mute', 'volume', 'fullscreen']
-        });
+        // Select the video element
+        const video = document.getElementById('video');
+        const videoSource = document.getElementById('video-source');
+        
+        // Initialize hls.js
+        if (Hls.isSupported()) {
+            const hls = new Hls();
+            
+            // Replace with the actual m3u8 URL
+            const m3u8Url = 'your_playlist.m3u8';  // Replace this with your actual m3u8 URL
 
-        // Function to toggle play and pause
+            // Load the m3u8 playlist into the player
+            hls.loadSource(m3u8Url);
+            hls.attachMedia(video);
+
+            // Handle events (optional)
+            hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                console.log('Manifest loaded, starting playback.');
+            });
+        } else {
+            console.error('HLS.js is not supported in this browser.');
+            // If HLS.js is not supported, you can fallback to the native player or display a message.
+            videoSource.src = 'your_playlist.m3u8'; // Fallback if HLS.js is not available
+        }
+
+        // Play/Pause function
         function togglePlayPause() {
-            if (player.playing) {
-                player.pause();
+            if (video.paused) {
+                video.play();
             } else {
-                player.play();
+                video.pause();
             }
         }
     </script>
