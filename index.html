@@ -38,7 +38,7 @@
 
         // Global variable to store the modified playlist
         let modifiedPlaylist = "";
-        
+
         // Function to fetch, modify, and store the M3U8 playlist and its TS segments locally
         async function fetchAndStoreM3U8(url) {
             try {
@@ -77,22 +77,16 @@
             }
         }
 
-        // Function to repeatedly fetch the M3U8 playlist every 10 seconds
+        // Function to keep the player running and updating the playlist
         function startPeriodicFetch() {
             setInterval(async () => {
                 const localM3U8Url = await fetchAndStoreM3U8(originalM3U8Url);
                 if (localM3U8Url) {
-                    // Re-load the modified M3U8 URL with new segments
-                    if (Hls.isSupported()) {
-                        const hls = new Hls();
-                        hls.loadSource(localM3U8Url);
-                        hls.attachMedia(video);
-                        hls.on(Hls.Events.MANIFEST_PARSED, function () {
-                            console.log("Updated manifest loaded, video ready to play!");
-                        });
-                    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                        video.src = localM3U8Url;
-                    }
+                    // Update the M3U8 playlist in HLS.js without refreshing the player
+                    const hls = Hls.getInstance();
+                    hls.loadSource(localM3U8Url); // Only update the source
+                    hls.startLoad(); // Ensure HLS starts loading new segments without refreshing the player
+                    console.log("Updated playlist loaded with new segments.");
                 } else {
                     console.error("Failed to update the modified M3U8 playlist.");
                 }
@@ -102,6 +96,8 @@
         // Initialize HLS.js player
         if (Hls.isSupported()) {
             const hls = new Hls();
+
+            // Fetch and store the initial M3U8 playlist
             fetchAndStoreM3U8(originalM3U8Url).then((localM3U8Url) => {
                 if (localM3U8Url) {
                     hls.loadSource(localM3U8Url);
