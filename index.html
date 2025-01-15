@@ -34,7 +34,7 @@
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script>
         const proxyUrl = "https://cors-proxy-fawn.vercel.app/proxy?url=";
-        const originalM3U8Url = "https://cors-proxy-fawn.vercel.app/proxy?url=https://d27h84tpitp9e0.cloudfront.net/ivs/v1/916749774596/cv7OeduHYcU8/2025/1/15/7/11/sRjo9dMRool0/media/hls/720p60/playlist_vod.m3u8";
+        const originalM3U8Url = "https://cors-proxy-fawn.vercel.app/proxy?url=https://d27h84tpitp9e0.cloudfront.net/ivs/v1/916749774596/cv7OeduHYcU8/2025/1/15/7/11/sRjo9dMRool0/media/hls/1080p60/playlist_vod.m3u8";
 
         const video = document.getElementById('videoPlayer');
 
@@ -45,29 +45,14 @@
                 const response = await fetch(url);
                 const playlist = await response.text();
 
-                // Extract TS segment URLs
-                const tsUrls = [...playlist.matchAll(/([^\n]+\.ts)/g)].map(match => match[0]);
+                // Base URL for resolving relative TS URLs
+                const baseUrl = url.replace(/\/playlist_vod\.m3u8$/, "/");
 
-                // Download and store each TS segment locally
-                const localTsUrls = [];
-                for (const tsUrl of tsUrls) {
-                    // Construct the double-proxy URL for each .ts segment
-                    const fullTsUrl = new URL(tsUrl, url).href;
+                // Extract and modify TS segment URLs
+                let modifiedPlaylist = playlist.replace(/([^\n]+\.ts)/g, (match) => {
+                    const fullTsUrl = new URL(match, baseUrl).href; // Resolve the full TS URL
                     const doubleProxyTsUrl = `${proxyUrl}${encodeURIComponent(`${proxyUrl}${encodeURIComponent(fullTsUrl)}`)}`;
-                    
-                    // Fetch the .ts segment using the double-proxy URL
-                    const tsResponse = await fetch(doubleProxyTsUrl);
-                    const tsBlob = await tsResponse.blob();
-
-                    // Store the segment locally and save the local Blob URL
-                    const localUrl = URL.createObjectURL(tsBlob);
-                    localTsUrls.push(localUrl);
-                }
-
-                // Replace TS segment URLs in the playlist with local Blob URLs
-                let modifiedPlaylist = playlist;
-                tsUrls.forEach((tsUrl, index) => {
-                    modifiedPlaylist = modifiedPlaylist.replace(tsUrl, localTsUrls[index]);
+                    return doubleProxyTsUrl;
                 });
 
                 // Create a Blob for the modified M3U8 playlist
