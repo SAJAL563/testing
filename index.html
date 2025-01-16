@@ -1,110 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stream Player</title>
-    <style>
-        /* General Reset */
-        body, html {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            height: 100%;
-            background: linear-gradient(135deg, #1a0033, #330066);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            font-family: Arial, sans-serif;
-            text-align: center;
-        }
-
-        /* Button Styling */
-        button {
-            margin: 20px;
-            padding: 10px 20px;
-            font-size: 18px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background 0.3s ease;
-        }
-
-        button#yes {
-            background: #28a745;
-            color: white;
-        }
-
-        button#yes:hover {
-            background: #218838;
-        }
-
-        button#no {
-            background: #dc3545;
-            color: white;
-        }
-
-        button#no:hover {
-            background: #c82333;
-        }
-
-        /* Video Player Styling */
-        video {
-            display: none;
-            width: 90%;
-            height: auto;
-            max-width: 100%;
-            max-height: 100%;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>M3U8 Stream Player</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f4f4f9;
+      margin: 0;
+      padding: 0;
+    }
+    #video-container {
+      margin-top: 50px;
+    }
+    video {
+      width: 80%;
+      max-width: 720px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+    }
+  </style>
 </head>
 <body>
-    <h1>Stream Player</h1>
-    <p>To play the stream, please ensure you have installed the <strong>CORS extension</strong>.</p>
-    <p>Also Dont forget to enable the <strong>CORS extension</strong>.</p>
-    <div id="buttons">
-        <button id="yes">Yes, Installed</button>
-        <button id="no">No, Install Now</button>
-    </div>
-    <video id="videoPlayer" controls></video>
+  <h1>M3U8 Stream Player</h1>
+  <div id="video-container">
+    <video id="video" controls></video>
+  </div>
+  <script>
+    // Proxy configuration
+    const proxy = {
+      username: "p.webshare.io",  // Replace with your Webshare proxy username
+      password: "8gzxkg15i70b",  // Replace with your Webshare proxy password
+      ip: "198.23.239.134",             // Replace with your Webshare proxy IP
+      port: "6540"          // Replace with your Webshare proxy port
+    };
 
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <script>
-        const originalM3U8Url = "https://d2gkjxlri0rfqi.cloudfront.net/ivs/v1/916749774596/48acSC7vpXvV/2025/1/15/11/30/SKyUblcr0arH/media/hls/1080p60/playlist_vod.m3u8";
-        const video = document.getElementById('videoPlayer');
-        const buttons = document.getElementById('buttons');
+    // M3U8 stream URL
+    const streamUrl = "https://video-weaver.fra05.hls.live-video.net/v1/playlist/CokGvXdt2cn71Mw7j90wFFwaszf4dU-8MYRtW-Z9PvA7DqJIU6eADGc5Yu4PIfbVZd_mcaN7jY3umf3RAuz14xAgRawcUGrdXyQBAz9q8sUxSrWCMHsALE2Rsfj6Nvj7v8Xmcpywcq8EDgtgLvYIhtbpURtpo6jiMZEd5s5IevemumhKQQv6nD9mIPimzVixhyub6kL_3tbg2ztsYXNx2HxHUd7KHkUC5eUg2BJHJLWhERVP_fxPHJeRnVXTNVDtdsuFW25gOHgMn9TElPZJkLW2QsBwcCnbtXzvq4HCBndNZtA6IM3yHjOYI-5bTrQQjSXf4ilz32mzDfYiYpjXb8Vbv2iXGpMU4MjU_qJhoj15m3VHs6BwciYfAMC-If72Fuyf8t6Xxgx7evOtbkOBhutTyzoAoemKlZf-bffolMYcZ_ZZM45_oqfNxZdLd1L5xabHq14LzqNq4mMWQlfLvDPgFxFDwfT1HGuHVctWvwj6RRiEeP2mM_2rEPxLb-tlq9kMfFjE8ecDXfGvj1CX6li5G-wjBIRYUlgRqW67gzv8QS-ddJFXknf3MWuwGl8gEUGMeIsTV3bia7NNOuqTi5Z98CkgePKjoPh_mhM2-9-Gr0w_IvWoaEBc6CJBmHtUHBOcu61k0iKJ_Df5A8C-rh_DtN7fmCwSerJzbC0k9Pp42l7bjdfHYrUbg4Qa1OVWsb_LBd-YWiOQ7CIGPOV0iA5sPJslEPehuNmhj1uyDAHDG1_A8CJXHeNczaPJQZ3pjMfrCy73DYGfSQA1OA6qGRaGL7sUgNzUWfeUOW1OIfZGNMNW_7C1UBJkZfpSV6r5KnMa_sLSQf1kxZeR5NyPrpwxX-2bd9_q89YBKMTkc1rY-_eZs9MiDSDoOPFgmX_RjP0IRuyhchox9COEiRgI5-v7KuxogIIIN7CxxqcKfa97Ylj1ZqIDVZ3RfBEpak8W0Y5m8FD8SvoI4iSNhwqnIUNDoJfeGN6m1z96FRaJJJlrp1dx4c-P4hCTBzKVI08-w27vEy59-xYUd9hMGgxcCFM58tityEAqV5cgASoJdXMtd2VzdC0yMKwL.m3u8"; // Replace with your M3U8 stream URL
 
-        // Handle button clicks
-        document.getElementById('yes').addEventListener('click', () => {
-            buttons.style.display = 'none';
-            video.style.display = 'block';
+    // Video element
+    const video = document.getElementById('video');
 
-            // Initialize HLS.js player
-            if (Hls.isSupported()) {
-                const hls = new Hls();
-                hls.loadSource(originalM3U8Url);
-                hls.attachMedia(video);
-                hls.on(Hls.Events.MANIFEST_PARSED, function () {
-                    console.log("Manifest loaded, video ready to play!");
-                    video.play();
-                });
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                // Fallback for Safari
-                video.src = originalM3U8Url;
-                video.play();
-            } else {
-                alert("Your browser does not support HLS streaming.");
-            }
-        });
+    // Create a custom XMLHttpRequest to set up proxy authorization
+    const customLoader = Hls.DefaultConfig.loader;
+    class ProxyLoader extends customLoader {
+      constructor(config) {
+        super(config);
+        this.xhrSetup = (xhr, url) => {
+          xhr.open('GET', url, true);
+          xhr.setRequestHeader('Proxy-Authorization', 'Basic ' + btoa(proxy.username + ':' + proxy.password));
+          xhr.setRequestHeader('Access-Control-Allow-Origin', '*');
+          xhr.setRequestHeader('Access-Control-Allow-Headers', '*');
+        };
+      }
+    }
 
-        document.getElementById('no').addEventListener('click', () => {
-            // Redirect to extension page
-            window.location.href = "https://chromewebstore.google.com/detail/moesif-origincors-changer/digfbfaphojjndkpccljibejjbppifbc";
-        });
-    </script>
+    // Check if HLS.js is supported
+    if (Hls.isSupported()) {
+      const hls = new Hls({
+        loader: ProxyLoader,
+      });
+      hls.loadSource(streamUrl);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.play();
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Fallback for Safari browsers
+      video.src = streamUrl;
+      video.addEventListener('loadedmetadata', () => {
+        video.play();
+      });
+    } else {
+      alert("Your browser does not support HLS streaming.");
+    }
+  </script>
 </body>
 </html>
