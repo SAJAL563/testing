@@ -3,20 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Stream Player</title>
+  <title>HLS Stream Player</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body>
-  <h1>Live Stream</h1>
-  <video id="videoPlayer" controls autoplay width="640" height="360">
-    <source src="/api/stream" type="application/x-mpegURL">
-    Your browser does not support the video tag.
-  </video>
+  <h1>Live Stream Player</h1>
+  <video id="video" controls autoplay width="640" height="360"></video>
 
   <script>
-    const video = document.getElementById('videoPlayer');
-    video.addEventListener('error', (e) => {
-      console.error('Video playback error:', e);
-    });
+    const video = document.getElementById('video');
+    const hls = new Hls();
+
+    // Load the stream via the Vercel serverless function
+    const streamUrl = '/api/stream';
+
+    if (Hls.isSupported()) {
+      hls.loadSource(streamUrl);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, function () {
+        video.play();
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = streamUrl;
+      video.addEventListener('loadedmetadata', function () {
+        video.play();
+      });
+    } else {
+      console.error('HLS is not supported in this browser.');
+    }
   </script>
 </body>
 </html>
