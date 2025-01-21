@@ -3,80 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>M3U8 Stream Player</title>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background-color: #f4f4f9;
-      margin: 0;
-      padding: 0;
-    }
-    #video-container {
-      margin-top: 50px;
-    }
-    video {
-      width: 80%;
-      max-width: 720px;
-      border: 1px solid #ccc;
-      border-radius: 10px;
-    }
-  </style>
+  <title>Stream Player</title>
 </head>
 <body>
-  <h1>M3U8 Stream Player</h1>
-  <div id="video-container">
-    <video id="video" controls></video>
-  </div>
+  <h1>Live Stream</h1>
+  <video id="videoPlayer" controls autoplay width="640" height="360">
+    <source src="/api/stream" type="application/x-mpegURL">
+    Your browser does not support the video tag.
+  </video>
+
   <script>
-    // Proxy configuration
-    const proxy = {
-      username: "vaerddgz",  // Replace with your Webshare proxy username
-      password: "8gzxkg15i70b",  // Replace with your Webshare proxy password
-      ip: "198.23.239.134",             // Replace with your Webshare proxy IP
-      port: "6540"          // Replace with your Webshare proxy port
-    };
-
-    // M3U8 stream URL
-    const streamUrl = "https://video-weaver.fra05.hls.live-video.net/v1/playlist/CokGvXdt2cn71Mw7j90wFFwaszf4dU-8MYRtW-Z9PvA7DqJIU6eADGc5Yu4PIfbVZd_mcaN7jY3umf3RAuz14xAgRawcUGrdXyQBAz9q8sUxSrWCMHsALE2Rsfj6Nvj7v8Xmcpywcq8EDgtgLvYIhtbpURtpo6jiMZEd5s5IevemumhKQQv6nD9mIPimzVixhyub6kL_3tbg2ztsYXNx2HxHUd7KHkUC5eUg2BJHJLWhERVP_fxPHJeRnVXTNVDtdsuFW25gOHgMn9TElPZJkLW2QsBwcCnbtXzvq4HCBndNZtA6IM3yHjOYI-5bTrQQjSXf4ilz32mzDfYiYpjXb8Vbv2iXGpMU4MjU_qJhoj15m3VHs6BwciYfAMC-If72Fuyf8t6Xxgx7evOtbkOBhutTyzoAoemKlZf-bffolMYcZ_ZZM45_oqfNxZdLd1L5xabHq14LzqNq4mMWQlfLvDPgFxFDwfT1HGuHVctWvwj6RRiEeP2mM_2rEPxLb-tlq9kMfFjE8ecDXfGvj1CX6li5G-wjBIRYUlgRqW67gzv8QS-ddJFXknf3MWuwGl8gEUGMeIsTV3bia7NNOuqTi5Z98CkgePKjoPh_mhM2-9-Gr0w_IvWoaEBc6CJBmHtUHBOcu61k0iKJ_Df5A8C-rh_DtN7fmCwSerJzbC0k9Pp42l7bjdfHYrUbg4Qa1OVWsb_LBd-YWiOQ7CIGPOV0iA5sPJslEPehuNmhj1uyDAHDG1_A8CJXHeNczaPJQZ3pjMfrCy73DYGfSQA1OA6qGRaGL7sUgNzUWfeUOW1OIfZGNMNW_7C1UBJkZfpSV6r5KnMa_sLSQf1kxZeR5NyPrpwxX-2bd9_q89YBKMTkc1rY-_eZs9MiDSDoOPFgmX_RjP0IRuyhchox9COEiRgI5-v7KuxogIIIN7CxxqcKfa97Ylj1ZqIDVZ3RfBEpak8W0Y5m8FD8SvoI4iSNhwqnIUNDoJfeGN6m1z96FRaJJJlrp1dx4c-P4hCTBzKVI08-w27vEy59-xYUd9hMGgxcCFM58tityEAqV5cgASoJdXMtd2VzdC0yMKwL.m3u8"; // Replace with your M3U8 stream URL
-
-    // Video element
-    const video = document.getElementById('video');
-
-    // Create a custom XMLHttpRequest to set up proxy authorization
-    const customLoader = Hls.DefaultConfig.loader;
-    class ProxyLoader extends customLoader {
-      constructor(config) {
-        super(config);
-        this.xhrSetup = (xhr, url) => {
-          xhr.open('GET', url, true);
-          xhr.setRequestHeader('Proxy-Authorization', 'Basic ' + btoa(proxy.username + ':' + proxy.password));
-          xhr.setRequestHeader('Access-Control-Allow-Origin', '*');
-          xhr.setRequestHeader('Access-Control-Allow-Headers', '*');
-        };
-      }
-    }
-
-    // Check if HLS.js is supported
-    if (Hls.isSupported()) {
-      const hls = new Hls({
-        loader: ProxyLoader,
-      });
-      hls.loadSource(streamUrl);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        video.play();
-      });
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Fallback for Safari browsers
-      video.src = streamUrl;
-      video.addEventListener('loadedmetadata', () => {
-        video.play();
-      });
-    } else {
-      alert("Your browser does not support HLS streaming.");
-    }
+    const video = document.getElementById('videoPlayer');
+    video.addEventListener('error', (e) => {
+      console.error('Video playback error:', e);
+    });
   </script>
 </body>
 </html>
