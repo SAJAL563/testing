@@ -3,31 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HLS Stream Player</title>
+  <title>HLS Stream</title>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body>
-  <h1>Live Stream Player</h1>
+  <h1>HLS Stream Player</h1>
   <video id="video" controls autoplay width="640" height="360"></video>
 
   <script>
     const video = document.getElementById('video');
-    const hls = new Hls();
-
-    // Load the stream via the Vercel serverless function
-    const streamUrl = '/api/stream';
+    const proxyUrl = '/api/proxy-stream?broadcastId=32934207'; // Call your backend endpoint
 
     if (Hls.isSupported()) {
-      hls.loadSource(streamUrl);
+      const hls = new Hls();
+      hls.loadSource(proxyUrl); // Use the proxy URL
       hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, function () {
-        video.play();
-      });
+      hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = streamUrl;
-      video.addEventListener('loadedmetadata', function () {
-        video.play();
-      });
+      video.src = proxyUrl;
+      video.addEventListener('loadedmetadata', () => video.play());
     } else {
       console.error('HLS is not supported in this browser.');
     }
