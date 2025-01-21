@@ -1,30 +1,261 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HLS Stream</title>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BGMI TPT Live Stream</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <style>
+        @keyframes gradientText {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        body {
+            background-color: #0a0612;
+            /* Change body color if needed */
+            color: white;
+            font-family: 'Rajdhani', sans-serif;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        .gradient-text {
+            font-size: 200%;
+            font-weight: bold;
+            position: relative;
+            background: linear-gradient(45deg, #ff7e5f, #feb47b, #86a8e7);
+            background-size: 300% 300%;
+            color: transparent;
+            -webkit-background-clip: text;
+            animation: gradientText 3s ease infinite;
+            display: inline-block;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 0 20px;
+            border-radius: 0 0 20px 20px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 1;
+            height: 70px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        #loading-text {
+            margin-top: 20px;
+            font-size: 1.5em;
+            animation: fadeIn 2s ease-in-out;
+        }
+
+        @keyframes gradientBackground {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        #video-container {
+            margin: 20px auto;
+            max-width: 95%;
+            width: 1000px;
+            position: relative;
+            background: linear-gradient(45deg, #d25fff, #f0fc4c, #4787ff);
+            background-size: 300% 300%;
+            animation: gradientBackground 5s ease infinite;
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            padding: 3px;
+            z-index: 1;
+        }
+
+        #video-player {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .quality-selector {
+            position: absolute;
+            top: 13px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 20px;
+            color: white;
+            padding: 5px 15px;
+            font-size: 14px;
+            display: none;
+            z-index: 10;
+            transition: opacity 0.3s ease;
+        }
+
+        .quality-selector button {
+            background: none;
+            border: none;
+            color: rgb(255, 255, 255);
+            font-size: 14px;
+            cursor: pointer;
+            padding: 5px 0;
+            text-align: left;
+            width: 100%;
+        }
+
+        .quality-selector button:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .quality-selector .current-quality {
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .quality-selector:hover .quality-options {
+            display: block;
+        }
+
+        .quality-options {
+            display: none;
+            margin-top: 10px;
+        }
+
+        #video-player:hover + .quality-selector,
+        .quality-selector:hover {
+            display: block;
+        }
+
+        .background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://i.pinimg.com/originals/89/56/9a/89569a62df56a7c75ea6356a48976368.gif') no-repeat center center;
+            background-size: cover;
+            opacity: 0.3;
+            z-index: 0;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script type="module">
+        let hls;
+        let availableQualities = [];
+        let currentQuality = 'Auto';
+
+        window.onload = function () {
+            const loadingText = document.getElementById('loading-text');
+            const streamUrl = 'https://testing-six-opal.vercel.app/api/proxy-stream?broadcastId=32934207'; // Update with your actual Vercel proxy URL
+
+            initializePlayer(streamUrl);
+            loadingText.textContent = "";
+        };
+
+        function initializePlayer(videoUrl) {
+            const video = document.getElementById('video-player');
+            const qualitySelector = document.querySelector('.quality-selector');
+            const qualityOptions = document.querySelector('.quality-options');
+            const currentQualityLabel = document.querySelector('.current-quality');
+
+            if (Hls.isSupported()) {
+                hls = new Hls();
+                hls.loadSource(videoUrl);
+                hls.attachMedia(video);
+
+                hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                    availableQualities = hls.levels.map((level, index) => ({
+                        index,
+                        resolution: `${level.height}p`,
+                    }));
+                    populateQualitySelector();
+                });
+
+                hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
+                    currentQuality = data.level === -1 ? 'Auto' : `${hls.levels[data.level].height}p`;
+                    currentQualityLabel.textContent = `⚙️Quality: ${currentQuality}`;
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = videoUrl;
+                video.addEventListener('loadedmetadata', function () {
+                    video.play();
+                });
+            } else {
+                document.getElementById('loading-text').textContent = "Your browser does not support HLS.";
+            }
+        }
+
+        function populateQualitySelector() {
+            const qualityOptions = document.querySelector('.quality-options');
+            qualityOptions.innerHTML = '';
+
+            const autoButton = document.createElement('button');
+            autoButton.textContent = 'Auto';
+            autoButton.addEventListener('click', () => {
+                hls.currentLevel = -1; // Auto quality
+            });
+            qualityOptions.appendChild(autoButton);
+
+            availableQualities.forEach(({ index, resolution }) => {
+                const qualityButton = document.createElement('button');
+                qualityButton.textContent = resolution;
+                qualityButton.addEventListener('click', () => {
+                    hls.currentLevel = index;
+                });
+                qualityOptions.appendChild(qualityButton);
+            });
+        }
+    </script>
 </head>
+
 <body>
-  <h1>HLS Stream Player</h1>
-  <video id="video" controls autoplay width="640" height="360"></video>
-
-  <script>
-    const video = document.getElementById('video');
-    const proxyUrl = '/api/proxy-stream?broadcastId=32934207'; // Call your backend endpoint
-
-    if (Hls.isSupported()) {
-      const hls = new Hls();
-      hls.loadSource(proxyUrl); // Use the proxy URL
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = proxyUrl;
-      video.addEventListener('loadedmetadata', () => video.play());
-    } else {
-      console.error('HLS is not supported in this browser.');
-    }
-  </script>
+    <div class="background"></div>
+    <header>
+        <h1 class="gradient-text">BGMI TPT Live Stream</h1>
+    </header>
+    <div id="loading-text">Loading stream...</div>
+    <div id="video-container">
+        <video id="video-player" controls></video>
+        <div class="quality-selector">
+            <div class="current-quality">Quality: Auto</div>
+            <div class="quality-options"></div>
+        </div>
+    </div>
 </body>
+
 </html>
